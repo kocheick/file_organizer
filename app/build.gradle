@@ -7,13 +7,13 @@ plugins {
 
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 31
     buildToolsVersion "30.0.3"
 
     defaultConfig {
         applicationId "com.example.fileorganizer"
         minSdkVersion 21
-        targetSdkVersion 30
+        targetSdkVersion 31
         versionCode 1
         versionName "1.0"
 
@@ -36,61 +36,63 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
     kotlinOptions {
-        
+        freeCompilerArgs +=["-Xjvm-default=all",]
+
+
         jvmTarget = "1.8"
-        freeCompilerArgs += "-Xallow-jvm-ir-dependencies"
 
     }
     composeOptions {
       //  kotlinCompilerVersion "1.5.10"
-        kotlinCompilerExtensionVersion "1.0.0-beta08"
+        kotlinCompilerExtensionVersion = "$compose_version"
     }
 
 }
 
 dependencies {
-    def compose_version = "beta08"
 
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.5.10"
-    implementation 'androidx.core:core-ktx:1.5.0'
-    implementation 'androidx.appcompat:appcompat:1.3.0'
-    implementation 'com.google.android.material:material:1.3.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.6.21"
+    implementation 'androidx.core:core-ktx:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'com.google.android.material:material:1.6.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.3'
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
     //live data
-    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.3.1"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.4.1"
 
     // Compiler
-    implementation "androidx.compose.compiler:compiler:1.0.0-$compose_version"
+    implementation "androidx.compose.compiler:compiler:$compose_version"
 
-    implementation "androidx.compose.ui:ui:1.0.0-$compose_version"
+    implementation "androidx.compose.ui:ui:$compose_version"
     // Tooling support (Previews, etc.)
-    implementation "androidx.compose.ui:ui-tooling:1.0.0-$compose_version"
+    implementation "androidx.compose.ui:ui-tooling:$compose_version"
     // Foundation (Border, Background, Box, Image, Scroll, shapes, animations, etc.)
-    implementation "androidx.compose.foundation:foundation:1.0.0-$compose_version"
+    implementation "androidx.compose.foundation:foundation:$compose_version"
     // Material Design
-    implementation "androidx.compose.material:material:1.0.0-$compose_version"
+    implementation "androidx.compose.material:material:$compose_version"
     // Material design icons
-    implementation "androidx.compose.material:material-icons-core:1.0.0-$compose_version"
-    implementation "androidx.compose.material:material-icons-extended:1.0.0-$compose_version"
+    implementation "androidx.compose.material:material-icons-core:$compose_version"
+    implementation "androidx.compose.material:material-icons-extended:$compose_version"
     // Integration with activities
-    implementation 'androidx.activity:activity-compose:1.3.0-beta01'
+    implementation 'androidx.activity:activity-compose:1.6.0-alpha03'
     // Integration with ViewModels
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:1.0.0-alpha06'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.4.1'
     // Integration with observables
-    implementation "androidx.compose.runtime:runtime-livedata:1.0.0-$compose_version"
+    implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
     // UI Tests
-    androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.0.0-$compose_version"
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
 
 
     // Room
-    def room_version = "2.3.0"
+    def room_version = "2.4.2"
 
     implementation "androidx.room:room-runtime:$room_version"
     kapt "androidx.room:room-compiler:$room_version"
     implementation "androidx.room:room-ktx:$room_version"
+
+
 
 }
