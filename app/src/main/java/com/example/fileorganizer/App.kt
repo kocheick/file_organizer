@@ -8,6 +8,7 @@ import com.example.fileorganizer.data.database.TaskDao
 import com.example.fileorganizer.data.repository.Repository
 import com.example.fileorganizer.data.repository.RepositoryImpl
 import com.example.fileorganizer.data.database.TaskDatabase
+import com.example.fileorganizer.service.FileMover
 import com.example.fileorganizer.ui.viewmodel.MainViewModel
 
 class App : Application() {
@@ -21,11 +22,13 @@ class App : Application() {
 
         lateinit var repository: Repository
 
+        lateinit var fileMover : FileMover
+
         val vmFactory by lazy {
             object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     @Suppress("UNCHECKED_CAST")
-                    return MainViewModel(repository = repository) as T
+                    return MainViewModel(repository = repository, fileMover = fileMover) as T
                 }
             }
         }
@@ -37,6 +40,8 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+
+        fileMover = FileMover(this)
 
         database = TaskDatabase.getInstance(instance)
 

@@ -1,6 +1,5 @@
 package com.example.fileorganizer
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,23 +8,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.util.*
 
@@ -33,13 +23,15 @@ import java.util.*
 @Composable
 fun TaskItem(
     task: TaskOrder,
-    onTaskClick: (TaskOrder) -> Unit = {},
-    onTaskEditClick: (TaskOrder) -> Unit = {}
+    onTaskClick: () -> Unit = {},
+    onTaskEditClick: () -> Unit = {}
 ) {
 
-    val fileType = task.type.uppercase()
-    val sourceFolder = task.from
-    val destinationFolder = task.to
+    val fileType = task.extension.uppercase()
+    val sourceFolder = task.source.substringAfterLast("A").replace("/",">").replace("%\\d[a-zA-Z]".toRegex(), " > ")
+    val destinationFolder = task.destination.substringAfterLast("A").replace(":",">").replace("%\\d[a-zA-Z]".toRegex(), " > ")
+
+
 
     Row(
         modifier = Modifier
@@ -55,7 +47,7 @@ fun TaskItem(
                 indication = rememberRipple(),
                 interactionSource = MutableInteractionSource(),
                 onClick = {
-                    onTaskClick(task)
+                    onTaskClick()
                     println("$task clicked")
                 }
             ).background(
@@ -86,14 +78,14 @@ fun TaskItem(
             Column(
                 modifier = Modifier
                     .width(250.dp)
-                    .padding(start = 16.dp)
+                    .padding(start = 16.dp),
+                verticalArrangement = Arrangement.Center
             ) {
 
-                FolderPath("from", sourceFolder)
+                FolderPath("from", sourceFolder )
                 FolderPath("to", destinationFolder)
             }
         }
-
 
         //Edit button
         TextButton(
@@ -103,7 +95,7 @@ fun TaskItem(
                 contentColor = colorResource(R.color.jet)
             ), modifier = Modifier.padding(end = 8.dp),
             onClick = {
-                onTaskEditClick(task)
+                onTaskEditClick()
                 println("Edit button clicked for $task")
             }
         )
@@ -114,26 +106,26 @@ fun TaskItem(
 @Composable
 private fun FolderPath(source: String, destination: String) {
 
-    val formattedDestination = if (destination.length > 16) {
-
-        val first = destination.substringBefore("/")
-        val last =
-            if (destination.contains(":") && destination.substringAfterLast(":").length > 2) {
-                destination.substringAfterLast(":").substringAfterLast("/")
-            } else destination.substringBeforeLast("/")
-        first + last
-    } else destination.replaceFirst("/tree","Root")
+//    val formattedDestination = if (destination.length > 16) {
+//
+//        val first = destination.substringBefore("/")
+//        val last =
+//            if (destination.contains(":") && destination.substringAfterLast(":").length > 2) {
+//                destination.substringAfterLast(":").substringAfterLast("/")
+//            } else destination.substringBeforeLast("/")
+//        first + last
+//    } else destination.replaceFirst("/tree","Root")
 
 
     Row(horizontalArrangement = Arrangement.SpaceBetween) {
 
         Text(source, color = Color.Gray, modifier = Modifier
-            .width(40.dp))
+            .width(40.dp), maxLines = 2)
 
         Text(" : ", color = colorResource(R.color.jet),
             modifier = Modifier.padding(start = 2.dp, end = 2.dp)
         )
-        Text("/$formattedDestination/", color = colorResource(R.color.jet), maxLines = 2)
+        Text(destination, color = colorResource(R.color.jet), maxLines = 2)
     }
 
 

@@ -1,5 +1,7 @@
 package com.example.fileorganizer.ui
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +26,7 @@ import com.example.fileorganizer.R
 import com.example.fileorganizer.ui.viewmodel.MainViewModel
 
 
+@RequiresApi(Build.VERSION_CODES.R)
 @Composable
 fun TaskScreen(viewModel: MainViewModel) {
 
@@ -33,11 +36,17 @@ fun TaskScreen(viewModel: MainViewModel) {
         Scaffold(
             topBar = { TopBarLayout() },
             floatingActionButton = {
-                AddTaskButton(onTaskItemAdded = { itemToAdd -> viewModel.addTask(itemToAdd) })
+                ActionButtons(
+                    onTaskItemAdded = { itemToAdd ->
+                        viewModel.addTask(itemToAdd)
+                    },
+
+                    onExecuteTasksClicked = { viewModel.executeMove() })
             },
             floatingActionButtonPosition = FabPosition.End,
             isFloatingActionButtonDocked = false,
             content = {
+                it
                 TaskListContent(tasksList)
             },
             bottomBar = {
@@ -85,9 +94,12 @@ fun TaskListContent(tasksList: List<TaskOrder>) {
                 .background(colorResource(R.color.raisin_black).copy(0.00f))
         ) {
 
+
             items(tasksList) { task ->
 
-                TaskItem(task)
+                TaskItem(task,
+                    onTaskClick = {},
+                    onTaskEditClick = {})
             }
         }
     }
@@ -95,8 +107,9 @@ fun TaskListContent(tasksList: List<TaskOrder>) {
 
 
 @Composable
-fun AddTaskButton(
-    onTaskItemAdded: (TaskOrder) -> Unit
+fun ActionButtons(
+    onTaskItemAdded: (TaskOrder) -> Unit,
+    onExecuteTasksClicked: () -> Unit
 ) {
 
     val isDialogOpen = remember { mutableStateOf(false) }
@@ -116,7 +129,7 @@ fun AddTaskButton(
 
         FloatingActionButton(
             modifier = Modifier.size(32.dp),
-            onClick = { println("Exec button clicked") },
+            onClick = { onExecuteTasksClicked() },
             backgroundColor = colorResource(R.color.jet)
         ) {
             Icon(

@@ -3,6 +3,6 @@
     <string name="no_item_created">No item created</string>
     <string name="destination">Destination</string>
     <string name="source">Source</string>
-    <string name="select">Select</string>
+    <string name="selectFolders">Select folders below</string>
     <string name="edit">Edit</string>
 </resources>
