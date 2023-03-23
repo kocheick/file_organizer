@@ -192,23 +192,24 @@ class FileMover(private val context: Context) {
         val destination = Uri.parse(destinationPath)
         val sourceFolder = DocumentFile.fromTreeUri(context, source)
         val destFolder = DocumentFile.fromTreeUri(context, destination)
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             val contentResolver = context.contentResolver
             sourceFolder?.listFiles()?.forEach { file ->
                 if (file != null && file.name?.endsWith(extension) == true) {
-                    println("found ${file.name} !")
+                    println("found ${file} !")
                     val newFile = destFolder?.createFile(file.type ?: "*/*", file.name!!)
 
 //                    destFolder.createFile("*/*", file.name!!).let {
 ////                        file.delxete()
 //                    }
-                    // Open an InputStream to read the content of the original file
-                    contentResolver.openInputStream(file.uri)?.use { inputStream ->
-                        // Open an OutputStream to write the content of the original file to the new file
-                        contentResolver.openOutputStream(newFile?.uri ?: return@forEach)
-                            ?.use { outputStream ->
-                                inputStream.copyTo(outputStream)
-                            }
+                    withContext(Dispatchers.IO){ // Open an InputStream to read the content of the original file
+                        contentResolver.openInputStream(file.uri)?.use { inputStream ->
+                            // Open an OutputStream to write the content of the original file to the new file
+                            contentResolver.openOutputStream(newFile?.uri ?: return@use)
+                                ?.use { outputStream ->
+                                    inputStream.copyTo(outputStream)
+                                }
+                        }
                     }
                 }
                 file.delete()

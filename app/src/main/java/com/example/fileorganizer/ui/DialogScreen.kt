@@ -8,9 +8,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DoubleArrow
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
@@ -196,6 +199,19 @@ fun TaskForm(
                     ?: "No src selected", maxLines = 2
             )
         }
+        Button(
+            onClick = { swapPaths(sourcePath, destPath) },
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Icon(
+                Icons.Rounded.DoubleArrow, modifier = Modifier.rotate(90F),
+                contentDescription = stringResource(id = R.string.reverse_button)
+            )
+            Icon(
+                Icons.Rounded.DoubleArrow, modifier = Modifier.rotate(-90F),
+                contentDescription = stringResource(id = R.string.reverse_button)
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -226,12 +242,20 @@ fun TaskForm(
 
     }
 
-    val task = taskToBeEdited?.copy(extension = typeText, source = sourcePath.value, destination = destPath.value
-    ) ?: TaskOrder(typeText, sourcePath.value.toString(),  destPath.value.toString())
+    val task = taskToBeEdited?.copy(
+        extension = typeText, source = sourcePath.value, destination = destPath.value
+    ) ?: TaskOrder(typeText, sourcePath.value.toString(), destPath.value.toString())
     onTaskItemAdded(task)
     println(
         "new item being paassed ${task}"
     )
+}
+
+fun swapPaths(sourcePath: MutableState<String>, destPath: MutableState<String>) {
+    val temp = sourcePath.value
+    sourcePath.value = destPath.value
+    destPath.value = temp
+
 }
 
 

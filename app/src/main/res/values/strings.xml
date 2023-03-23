@@ -5,4 +5,5 @@
     <string name="source">Source</string>
     <string name="selectFolders">Select folders below</string>
     <string name="edit">Edit</string>
+    <string name="reverse_button">reverse button</string>
 </resources>
