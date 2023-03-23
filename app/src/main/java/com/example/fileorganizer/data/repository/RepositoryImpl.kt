@@ -12,6 +12,10 @@ class RepositoryImpl(private val taskDbDao: TaskDao) : Repository {
 
     }
 
+    override suspend fun getTaskbyId(taskID: Int): TaskOrder? {
+        return taskDbDao.getById(taskID)
+    }
+
 
     override suspend fun updateTask(taskOrder: TaskOrder) {
         taskDbDao.update(taskOrder)

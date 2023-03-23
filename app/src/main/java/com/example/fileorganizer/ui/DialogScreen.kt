@@ -24,7 +24,7 @@ import com.example.fileorganizer.TaskOrder.Companion.EMPTY_ITEM
 
 
 @Composable
-fun ShowDialog(
+fun AddTaskDialog(
     openDialog: MutableState<Boolean>,
     onTaskItemAdded: (TaskOrder) -> Unit,
 ) {
@@ -75,23 +75,25 @@ fun ShowDialog(
 
 @Composable
 fun EditTaskDialog(
-    taskOrder: TaskOrder,
+    taskOrder: TaskOrder?,
     openDialog: MutableState<Boolean>,
-    onTaskItemSaved: (TaskOrder) -> Unit,
+    onItemUpdated: (TaskOrder) -> Unit,
 ) {
-    var newTask = taskOrder
+    var updatedItem: TaskOrder = EMPTY_ITEM
 
     if (openDialog.value) {
         AlertDialog(onDismissRequest = { openDialog.value = false },
-            title = { Text("Add new item") },
+            title = { Text("Edit item") },
             //alert dialog content/body goes in here
             text = {
-                TaskForm(onTaskItemAdded = { newTask = it })
+                TaskForm(onTaskItemAdded = { updatedItem = it }, taskToBeEdited = taskOrder)
             },
             buttons = {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(
-                        onClick = { openDialog.value = false },
+                        onClick = {
+                            openDialog.value = false
+                        },
                         colors = ButtonDefaults.buttonColors(
                             contentColor = colorResource(R.color.fiery_rose),
                             backgroundColor = Color.LightGray.copy(0.0f)
@@ -101,8 +103,7 @@ fun EditTaskDialog(
                     }
                     TextButton(
                         onClick = {
-                            onTaskItemSaved(newTask)
-
+                            onItemUpdated(updatedItem)
                             openDialog.value = false
                         },
                         colors = ButtonDefaults.buttonColors(
@@ -110,7 +111,7 @@ fun EditTaskDialog(
                             backgroundColor = Color.LightGray.copy(0.0f)
                         )
                     ) {
-                        Text("Add")
+                        Text("Save")
                     }
                 }
             }
@@ -122,24 +123,24 @@ fun EditTaskDialog(
 
 @Composable
 fun TaskForm(
-    onTaskItemAdded: (TaskOrder) -> Unit, newTask: TaskOrder? = null
+    onTaskItemAdded: (TaskOrder) -> Unit, taskToBeEdited: TaskOrder? = null
 ) {
-    val destPath = remember { mutableStateOf<Uri?>(null) }
-    val sourcePath = remember { mutableStateOf<Uri?>(null) }
+    val src = if (taskToBeEdited != null) Uri.decode(taskToBeEdited.source) else ""
+    val dest = if (taskToBeEdited != null) Uri.decode(taskToBeEdited.destination) else ""
+
+    val sourcePath = remember { mutableStateOf(src) }
+    val destPath = remember { mutableStateOf(dest) }
 
     val sourceDirectoryPickerLauncher = pickDirectory(sourcePath)
     val destinationDirectoryPickerLauncher = pickDirectory(destPath)
 
-    val typeTextState = remember { mutableStateOf(TextFieldValue()) }
+    val typeTextState = remember { mutableStateOf(TextFieldValue(taskToBeEdited?.extension ?: "")) }
 
 
     val typeText = typeTextState.value.text
-    val newTask =
-        TaskOrder(typeText, sourcePath.value.toString(), destPath.value.toString())
-    onTaskItemAdded(newTask)
-    println(
-        "new item being paassed ${newTask}"
-    )
+
+    val propsText =
+        if (taskToBeEdited == null) "Enter new file type, current -> ${typeTextState.value.text.uppercase()}" else "Enter file Extension or Type  :  ${taskToBeEdited.extension.uppercase()}"
 
     Column(
         modifier = Modifier
@@ -151,7 +152,7 @@ fun TaskForm(
         Text(
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
-            text = "Enter file Extension or Type  :  ${typeTextState.value.text.uppercase()}"
+            text = propsText
         )
         TextField(
             singleLine = true, maxLines = 1,
@@ -168,12 +169,12 @@ fun TaskForm(
             fontWeight = FontWeight.SemiBold
         )
 
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             //source folder button
 
@@ -191,17 +192,17 @@ fun TaskForm(
             }
 
             Text(
-                sourcePath.value?.path?.substringAfterLast(":")?.replace("/", " > ")
+                sourcePath.value?.substringAfterLast(":")?.replace("/", " > ")
                     ?: "No src selected", maxLines = 2
             )
         }
 
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             //destination folder button
 
@@ -216,7 +217,7 @@ fun TaskForm(
                 Text(stringResource(R.string.destination), textAlign = TextAlign.Center)
             }
             Text(
-                destPath.value?.path?.substringAfterLast(":")
+                destPath.value?.substringAfterLast(":")
                     ?.replace("/", " > ")
                     ?: "No src selected", maxLines = 2
             )
@@ -224,16 +225,30 @@ fun TaskForm(
 
 
     }
+
+    val task = taskToBeEdited?.copy(extension = typeText, source = sourcePath.value, destination = destPath.value
+    ) ?: TaskOrder(typeText, sourcePath.value.toString(),  destPath.value.toString())
+    onTaskItemAdded(task)
+    println(
+        "new item being paassed ${task}"
+    )
 }
 
 
 @Composable
-fun pickDirectory(pathTextState: MutableState<Uri?>): ManagedActivityResultLauncher<Uri?, Uri?> {
+fun pickDirectory(pathTextState: MutableState<String>): ManagedActivityResultLauncher<Uri?, Uri?> {
 
     val result =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocumentTree()) { uri ->
             uri?.let {
-                pathTextState.value = it
+                println("your URI path: ${it.path}")
+                println("your URI encoded path: ${it.encodedPath}")
+                println("your URI path fragments: ${it.pathSegments}")
+                println("your URI scheme: ${it.scheme}")
+                println("your URI authority: ${it.authority}")
+                println("your URI encoded authority: ${it.encodedAuthority}")
+                println("your URI full: ${Uri.decode(it.toString())}")
+                pathTextState.value = Uri.decode(it.toString())
             }
         }
     return result

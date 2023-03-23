@@ -31,23 +31,42 @@ import com.example.fileorganizer.ui.viewmodel.MainViewModel
 fun TaskScreen(viewModel: MainViewModel) {
 
     val tasksList: List<TaskOrder> by viewModel.tasks.observeAsState(listOf())
+    val isAddDialogOpen = remember { mutableStateOf(false) }
+    val isEditDialogOpen = remember { mutableStateOf(false) }
+
+
+    var itemToEdit by remember {
+        mutableStateOf(TaskOrder.EMPTY_ITEM)
+    }
 
     AppTheme {
         Scaffold(
             topBar = { TopBarLayout() },
             floatingActionButton = {
                 ActionButtons(
-                    onTaskItemAdded = { itemToAdd ->
-                        viewModel.addTask(itemToAdd)
+                    onAddNewTaskItem = {
+                        isAddDialogOpen.value = true
                     },
 
                     onExecuteTasksClicked = { viewModel.executeMove() })
             },
             floatingActionButtonPosition = FabPosition.End,
             isFloatingActionButtonDocked = false,
-            content = {
-                it
-                TaskListContent(tasksList)
+            content = { paddingValues: PaddingValues ->
+                paddingValues
+                TaskListContent(tasksList, onEditItmClicked = { itemToBeEdited ->
+                    itemToEdit = itemToBeEdited
+                    isEditDialogOpen.value = true
+                })
+                AddTaskDialog(isAddDialogOpen, onTaskItemAdded = { itemToAdd ->
+                    viewModel.addTask(itemToAdd)
+                })
+                EditTaskDialog(
+                    taskOrder = itemToEdit,
+                    openDialog = isEditDialogOpen,
+                    onItemUpdated = { viewModel.updateItem(it) })
+
+
             },
             bottomBar = {
                 //BottomBarLayout()
@@ -82,8 +101,9 @@ fun BottomBarLayout() {
 }
 
 @Composable
-fun TaskListContent(tasksList: List<TaskOrder>) {
-    if (tasksList.isNullOrEmpty()) {
+fun TaskListContent(tasksList: List<TaskOrder>, onEditItmClicked: (TaskOrder) -> Unit) {
+
+    if (tasksList.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(text = stringResource(R.string.no_item_created), fontSize = 24.sp)
         }
@@ -94,13 +114,15 @@ fun TaskListContent(tasksList: List<TaskOrder>) {
                 .background(colorResource(R.color.raisin_black).copy(0.00f))
         ) {
 
-
             items(tasksList) { task ->
 
                 TaskItem(task,
                     onTaskClick = {},
-                    onTaskEditClick = {})
+                    onTaskEditClick = { onEditItmClicked(task) })
+
+
             }
+
         }
     }
 }
@@ -108,22 +130,23 @@ fun TaskListContent(tasksList: List<TaskOrder>) {
 
 @Composable
 fun ActionButtons(
-    onTaskItemAdded: (TaskOrder) -> Unit,
+    onAddNewTaskItem: () -> Unit,
     onExecuteTasksClicked: () -> Unit
 ) {
 
-    val isDialogOpen = remember { mutableStateOf(false) }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(bottom = 64.dp)
+    ) {
 
         FloatingActionButton(
-            onClick = { isDialogOpen.value = true },
+            onClick = { onAddNewTaskItem() },
             backgroundColor = colorResource(R.color.fiery_rose)
         ) {
             Icon(Icons.Filled.Add, contentDescription = "Make a move")
         }
 
-        ShowDialog(isDialogOpen, onTaskItemAdded = { onTaskItemAdded(it) })
 
         Spacer(modifier = Modifier.padding(8.dp))
 
@@ -137,8 +160,6 @@ fun ActionButtons(
                 contentDescription = "Execute",
                 tint = colorResource(R.color.lavender_blush)
             )
-
         }
-
     }
 }

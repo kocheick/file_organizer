@@ -1,13 +1,14 @@
 package com.example.fileorganizer
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.*
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,7 +18,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import java.util.*
+import com.example.fileorganizer.Utility.MATCH_2_CHARS_AFTER_SIGN
 
 
 @Composable
@@ -28,8 +29,8 @@ fun TaskItem(
 ) {
 
     val fileType = task.extension.uppercase()
-    val sourceFolder = task.source.substringAfterLast("A").replace("/",">").replace("%\\d[a-zA-Z]".toRegex(), " > ")
-    val destinationFolder = task.destination.substringAfterLast("A").replace(":",">").replace("%\\d[a-zA-Z]".toRegex(), " > ")
+    val sourceFolder = task.source.substringAfterLast(":").replace("/"," > ")
+    val destinationFolder = task.destination.substringAfterLast(":").replace("/"," > ")
 
 
 
@@ -51,7 +52,7 @@ fun TaskItem(
                     println("$task clicked")
                 }
             ).background(
-                    colorResource(id = R.color.fiery_rose).copy(alpha = 0.03F),
+                    colorResource(id = R.color.fiery_rose).copy(alpha = 0.04F),
                     shape = RoundedCornerShape(200.dp)
                 ),
             verticalAlignment = Alignment.CenterVertically
@@ -78,7 +79,7 @@ fun TaskItem(
             Column(
                 modifier = Modifier
                     .width(250.dp)
-                    .padding(start = 16.dp),
+                    .padding(start = 12.dp),
                 verticalArrangement = Arrangement.Center
             ) {
 

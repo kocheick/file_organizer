@@ -9,6 +9,7 @@ interface Repository {
     suspend fun updateTask(taskOrder: TaskOrder)
    suspend fun deleteTask(taskOrder: TaskOrder)
     fun getTask(taskOrder: TaskOrder) : TaskOrder?
+    suspend fun getTaskbyId(taskID: Int) : TaskOrder?
   suspend  fun getTasks(): LiveData<List<TaskOrder>>
   suspend fun deleteAll()
 }

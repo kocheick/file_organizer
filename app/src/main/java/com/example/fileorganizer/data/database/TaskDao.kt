@@ -15,7 +15,7 @@ interface TaskDao {
         @Insert
         suspend fun insert(item:TaskOrder)
 
-        @Update
+        @Update(onConflict = OnConflictStrategy.REPLACE)
         suspend fun update(item:TaskOrder)
 
         @Delete
