@@ -3,23 +3,14 @@ package com.example.fileorganizer.service
 import android.content.Context
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
-import android.os.storage.StorageManager
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileFilter
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.FilenameFilter
+import java.io.*
 
 class FileMover(private val context: Context) {
 
@@ -186,101 +177,60 @@ class FileMover(private val context: Context) {
         }
     }
 
-    suspend fun moveFile(sourcePath: String, destinationPath: String, extension: String) {
+    suspend fun moveFiles(sourcePath: String, destinationPath: String, extension: String) {
 
         val source = Uri.parse(sourcePath)
         val destination = Uri.parse(destinationPath)
         val sourceFolder = DocumentFile.fromTreeUri(context, source)
         val destFolder = DocumentFile.fromTreeUri(context, destination)
-        withContext(Dispatchers.Default) {
-            val contentResolver = context.contentResolver
-            sourceFolder?.listFiles()?.forEach { file ->
-                if (file != null && file.name?.endsWith(extension) == true) {
-                    println("found ${file} !")
-                    val newFile = destFolder?.createFile(file.type ?: "*/*", file.name!!)
 
-//                    destFolder.createFile("*/*", file.name!!).let {
-////                        file.delxete()
-//                    }
-                    withContext(Dispatchers.IO){ // Open an InputStream to read the content of the original file
+        if (sourceFolder == null || !sourceFolder.exists()) {
+            throw Exception("Source file does not exist or is not accessible.")
+
+        }
+
+        if (destFolder == null || !destFolder.exists() || !destFolder.isDirectory) {
+            throw Exception("Destination folder does not exist or is not accessible.")
+        }
+        withContext(Dispatchers.IO) { // Open an InputStream to read the content of the original file
+
+            val contentResolver = context.contentResolver
+            var counter = 0
+            sourceFolder.listFiles().forEach { sourceFile ->
+
+                sourceFile?.let { file ->
+                    if (file.name?.endsWith(extension) == true) {
+                        counter++
+
+                        println("found ${file} !")
+                        val newFile = destFolder.createFile(file.type ?: "*/*", file.name!!)
+                            ?: throw Exception("Failed to copy file in the destination file.")
+
                         contentResolver.openInputStream(file.uri)?.use { inputStream ->
                             // Open an OutputStream to write the content of the original file to the new file
-                            contentResolver.openOutputStream(newFile?.uri ?: return@use)
+                            contentResolver.openOutputStream(newFile.uri)
                                 ?.use { outputStream ->
                                     inputStream.copyTo(outputStream)
                                 }
                         }
+                        // Delete the original file
+                        if (!file.delete()) {
+                            throw IOException("Failed to delete the original file.")
+                        }
                     }
                 }
-                file.delete()
             }
 
-
-//            val contentResolver = context.contentResolver
-//
-//            val sourceParcelFileDescriptor =
-//                contentResolver.openFileDescriptor(sourceUri!!.uri, "r", null)
-//            val sourceFileDescriptor = sourceParcelFileDescriptor?.fileDescriptor
-//            val sourceFile = FileInputStream(sourceFileDescriptor).channel
-//
-//            val destinationFileName = sourceUri?.name
-//            val destinationFileUri = Uri.withAppendedPath(destinationUri?.uri, destinationFileName)
-//            val destinationParcelFileDescriptor =
-//                contentResolver.openFileDescriptor(destinationFileUri, "w", null)
-//            val destinationFileDescriptor = destinationParcelFileDescriptor?.fileDescriptor
-//            val destinationFile = FileOutputStream(destinationFileDescriptor).channel
-//
-//            destinationFile.transferFrom(sourceFile, 0, sourceFile.size())
-//
-//            sourceFile.close()
-//            sourceParcelFileDescriptor?.close()
-//            destinationFile
-
-//    fun moveFilesEndingWith(extension: String, sourcePath: Uri, destinationPath: Uri) {
-//        if (extension.isNotEmpty()) {
-//            try {
-//                val sourceDir = File(sourcePath)
-//                val destinationDir = File(destinationPath)
-//
-//                val filesToMove = sourceDir.listFiles()?.mapNotNull { file ->
-//                    if (file.isFile && file.name?.substringAfterLast(".") == (extension)) file else null
-//                } ?: emptyList()
-//                val doc = DocumentFile.fromTreeUri(context, sourceDir.toUri())
-//                println("doc $doc")
-//                println("frdy ${destinationDir.listFiles()}")
-//                println("files to move ${filesToMove}")
-//
-////                if (filesToMove.isNotEmpty()) {
-////                    for (file in filesToMove) {
-////                        println(file)
-////                    }
-//////                        Log.d("File Mover Service", "Moving file ${file.name}")
-//////
-//////                        val success = file.renameTo(File(destinationDir, file.name))
-//////                        if (success) {
-//////                            Log.d(
-//////                                "File Mover Service",
-//////                                "File ${file.name} moved to $destinationDir"
-//////                            )
-//////                        } else {
-//////                            Log.d("File Mover Service", "Failed to move file ${file.name}")
-//////                        }
-//////                    }
-////                } else {
-////                    Log.d("File Mover Service", "No file ending with $extension in $sourceDir")
-////                }
-//            } catch (
-//                e: Exception
-//            ) {
-//                Log.e("File Mover Service", "Error happened :${e.message}")
-//            }
-//        }
-//    }
+            if (counter == 0)  {throw NoFileFoundException("No file with extension $extension to be found.")}
         }
+
     }
 }
+
 
 private fun Uri.isInDirectory(uriToSearchIn: Uri): Boolean {
     println("your uri to serch $uriToSearchIn")
     return true
 }
+
+data class NoFileFoundException(val errorMessage: String) : Exception(errorMessage)

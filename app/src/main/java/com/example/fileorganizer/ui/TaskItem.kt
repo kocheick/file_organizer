@@ -13,43 +13,48 @@ import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.fileorganizer.Utility.MATCH_2_CHARS_AFTER_SIGN
+import androidx.compose.ui.unit.sp
+import com.example.fileorganizer.Utility.formatUriToUIString
+import com.example.fileorganizer.model.UITaskRecord
 
 
 @Composable
 fun TaskItem(
-    task: TaskOrder,
-    onTaskClick: () -> Unit = {},
-    onTaskEditClick: () -> Unit = {}
+    task: UITaskRecord,
+    onClick: () -> Unit = {},
+    onEditClick: () -> Unit = {}
 ) {
 
-    val fileType = task.extension.uppercase()
-    val sourceFolder = task.source.substringAfterLast(":").replace("/"," > ")
-    val destinationFolder = task.destination.substringAfterLast(":").replace("/"," > ")
+    val nmbrOfChrs = task.extension.length
 
+    val textSize = if (nmbrOfChrs < 3) 16.sp else if (nmbrOfChrs < 5) 14.sp else if (nmbrOfChrs < 8 ) 10.sp else 9.sp
 
+            val sourceFolder = formatUriToUIString(task.source)
+        val destinationFolder = formatUriToUIString(task.destination)
 
     Row(
         modifier = Modifier
-            .padding(16.dp)
             .fillMaxWidth()
+            .padding(16.dp)
             , horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
 
     ) {
 
         Row(
-            modifier = Modifier.clickable(
+            modifier = Modifier
+                .clip(RoundedCornerShape(4.dp))
+                .clickable(
                 indication = rememberRipple(),
                 interactionSource = MutableInteractionSource(),
                 onClick = {
-                    onTaskClick()
-                    println("$task clicked")
+                    onClick()
                 }
             ).background(
                     colorResource(id = R.color.fiery_rose).copy(alpha = 0.04F),
@@ -68,9 +73,10 @@ fun TaskItem(
                     )
             ) {
                 Text(
-                    fileType,
+                    task.extension,
                     modifier = Modifier.align(Alignment.Center),
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    fontSize = textSize
                 )
 
             }
@@ -96,8 +102,7 @@ fun TaskItem(
                 contentColor = colorResource(R.color.jet)
             ), modifier = Modifier.padding(end = 8.dp),
             onClick = {
-                onTaskEditClick()
-                println("Edit button clicked for $task")
+                onEditClick()
             }
         )
     }

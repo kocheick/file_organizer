@@ -1,27 +1,28 @@
 package com.example.fileorganizer.data.database
 
-import androidx.lifecycle.LiveData
 import androidx.room.*
-import com.example.fileorganizer.TaskOrder
+import com.example.fileorganizer.TaskRecord
+import kotlinx.coroutines.flow.Flow
+
 @Dao
 interface TaskDao {
 
-        @Query("SELECT * from task_list")
-        fun getAll(): LiveData<List<TaskOrder>>
+        @Query("SELECT * from task_records")
+        fun getAll(): Flow<List<TaskRecord>>
 
-     @Query("SELECT * from task_list where id = :id")
-        fun getById(id: Int) : TaskOrder?
+    @Query("SELECT * from task_records where id = :id")
+        fun getById(id: Int) : TaskRecord?
 
         @Insert
-        suspend fun insert(item:TaskOrder)
+        suspend fun insert(item:TaskRecord)
 
         @Update(onConflict = OnConflictStrategy.REPLACE)
-        suspend fun update(item:TaskOrder)
+        suspend fun update(item:TaskRecord)
 
         @Delete
-        suspend fun delete(item:TaskOrder)
+        suspend fun delete(item:TaskRecord)
 
-        @Query("DELETE FROM task_list")
+        @Query("DELETE FROM task_records")
         suspend fun deleteAllTodos()
 
 

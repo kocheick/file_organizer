@@ -4,11 +4,9 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
-import com.example.fileorganizer.TaskOrder
-import com.example.fileorganizer.UriConverter
+import com.example.fileorganizer.TaskRecord
 
-@Database(entities = [TaskOrder::class], version = 1, exportSchema = false)
+@Database(entities = [TaskRecord::class], version = 1, exportSchema = false)
 //@TypeConverters(UriConverter::class)
 
 abstract class TaskDatabase : RoomDatabase() {

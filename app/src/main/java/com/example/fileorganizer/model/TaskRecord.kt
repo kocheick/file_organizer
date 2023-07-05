@@ -5,17 +5,27 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
+import com.example.fileorganizer.Utility.formatUriToUIString
+import com.example.fileorganizer.model.UITaskRecord
 
-@Entity(tableName = "task_list")
-data class TaskOrder(
-    @ColumnInfo(name = "task_extension") val extension: String,
-    @ColumnInfo(name = "task_source") val source: String,
-    @ColumnInfo(name = "task_destination") val destination: String,
+@Entity(tableName = "task_records")
+data class TaskRecord(
+    @ColumnInfo(name = "type_or_extension") val extension: String,
+    @ColumnInfo(name = "source_uri") val source: String,
+    @ColumnInfo(name = "destination_uri") val destination: String,
     @PrimaryKey(autoGenerate = true)
-    var id: Int = 0
+    val id: Int
 ) {
     companion object {
-        val EMPTY_ITEM = TaskOrder("", "", "")
+        val EMPTY_ITEM = TaskRecord("", "", "",0)
+    }
+
+    fun toUITaskRecord(): UITaskRecord {
+        val fileType = extension.uppercase()
+//        val sourceFolder = formatUriToUIString(source)
+//        val destinationFolder = formatUriToUIString(destination)
+
+        return UITaskRecord(fileType, source, destination, id)
     }
 }
 

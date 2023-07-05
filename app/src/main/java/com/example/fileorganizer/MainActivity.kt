@@ -3,7 +3,7 @@ package com.example.fileorganizer
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import com.example.fileorganizer.ui.TaskScreen
+import com.example.fileorganizer.ui.MainScreen
 import com.example.fileorganizer.ui.viewmodel.MainViewModel
 
 class MainActivity : AppCompatActivity() {
@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity() {
 
             supportActionBar?.hide()
 
-            TaskScreen(viewModel)
+            MainScreen(viewModel)
         }
     }
 

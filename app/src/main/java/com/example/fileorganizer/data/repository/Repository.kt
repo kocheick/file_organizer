@@ -1,15 +1,16 @@
 package com.example.fileorganizer.data.repository
 
 import androidx.lifecycle.LiveData
-import com.example.fileorganizer.TaskOrder
+import com.example.fileorganizer.TaskRecord
+import kotlinx.coroutines.flow.Flow
 
 interface Repository {
 
-    suspend fun addTask(taskOrder: TaskOrder)
-    suspend fun updateTask(taskOrder: TaskOrder)
-    suspend fun deleteTask(taskOrder: TaskOrder)
-    fun getTask(taskOrder: TaskOrder): TaskOrder?
-    suspend fun getTaskbyId(taskID: Int): TaskOrder?
-    suspend fun getTasks(): LiveData<List<TaskOrder>>
+    suspend fun addTask(taskRecord: TaskRecord)
+    suspend fun updateTask(taskRecord: TaskRecord)
+    suspend fun deleteTask(taskRecord: TaskRecord)
+    fun getTask(taskRecord: TaskRecord): TaskRecord?
+    suspend fun getTaskbyId(taskID: Int): TaskRecord?
+    suspend fun getTasks(): Flow<List<TaskRecord>>
     suspend fun deleteAll()
 }

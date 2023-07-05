@@ -13,9 +13,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -23,21 +23,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fileorganizer.*
 import com.example.fileorganizer.R
+import com.example.fileorganizer.model.MainState
+import com.example.fileorganizer.model.UITaskRecord
+import com.example.fileorganizer.ui.components.ErrorScreen
+import com.example.fileorganizer.ui.components.LoadingScreen
 import com.example.fileorganizer.ui.viewmodel.MainViewModel
 
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
-fun TaskScreen(viewModel: MainViewModel) {
+fun MainScreen(viewModel: MainViewModel) {
 
-    val tasksList: List<TaskOrder> by viewModel.tasks.observeAsState(listOf())
+    val mainState: MainState by viewModel.mainState.collectAsState()
     val isAddDialogOpen = remember { mutableStateOf(false) }
-    val isEditDialogOpen = remember { mutableStateOf(false) }
+    var showMissingFieldError by remember { mutableStateOf(false) }
 
 
-    var itemToEdit by remember {
-        mutableStateOf(TaskOrder.EMPTY_ITEM)
-    }
+    var itemToEdit: UITaskRecord? by remember { mutableStateOf(null) }
 
     AppTheme {
         Scaffold(
@@ -48,118 +50,180 @@ fun TaskScreen(viewModel: MainViewModel) {
                         isAddDialogOpen.value = true
                     },
 
-                    onExecuteTasksClicked = { viewModel.executeMove() })
+                    onExecuteTasksClicked = { viewModel.processTasks() })
             },
             floatingActionButtonPosition = FabPosition.End,
             isFloatingActionButtonDocked = false,
             content = { paddingValues: PaddingValues ->
                 paddingValues
-                TaskListContent(tasksList, onEditItmClicked = { itemToBeEdited ->
-                    itemToEdit = itemToBeEdited
-                    isEditDialogOpen.value = true
-                })
-                AddTaskDialog(isAddDialogOpen, onTaskItemAdded = { itemToAdd ->
-                    viewModel.addTask(itemToAdd)
-                })
-                EditTaskDialog(
-                    taskOrder = itemToEdit,
-                    openDialog = isEditDialogOpen,
-                    onItemUpdated = { viewModel.updateItem(it) })
+
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
 
 
-            },
-            bottomBar = {
-                //BottomBarLayout()
+                    when (mainState) {
+                        is MainState.Loading -> LoadingScreen()
+                        is MainState.Error -> {
+                            ErrorScreen((mainState as MainState.Error).message)
+                        }
+                        is MainState.Success -> {
+                            val mainState = (mainState as MainState.Success)
+                            val records = mainState.records
+                            val isEditDialogOpen = remember { mutableStateOf(false) }
+
+                            if (records.isEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.no_item_created),
+                                    fontSize = 24.sp
+                                )
+                            }
+                            else {
+                                TaskListContent(
+                                    records,
+                                    onEditItmClicked = { clickedTask ->
+
+                                        itemToEdit = clickedTask
+
+                                        isEditDialogOpen.value = true
+                                    })
+                            }
+                                AddTaskDialog(isAddDialogOpen, onTaskItemAdded = { itemToAdd ->
+                                    viewModel.addTask(itemToAdd)
+                                },
+                                    onFieldsLeftBlank = {
+                                        showMissingFieldError = !showMissingFieldError
+                                    })
+
+                            itemToEdit?.let { editable ->
+                                EditTaskDialog(
+                                    taskRecord = editable,
+                                    isDialogOpen = isEditDialogOpen,
+                                    onSaveUpdates = { viewModel.updateItem(it) },
+                                onFieldsLeftBlank = {
+                                    showMissingFieldError = !showMissingFieldError
+                                })
+                            }
+
+                            if (showMissingFieldError) {
+                                AlertDialog(onDismissRequest = { showMissingFieldError = false }, title = {Text("Missing Field Alert ")},
+                                    text = { Text(text = "Please, verify all inputs are filled")},
+                                buttons = {
+                                    Row(Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.End){
+                                        TextButton(
+                                            onClick = {
+                                                showMissingFieldError = false
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                contentColor = colorResource(R.color.fiery_rose),
+                                                backgroundColor = Color.LightGray.copy(0.0f)
+                                            )
+                                        ) {
+                                            Text("Ok,I undertand.")
+                                        }
+                                    }
+                                })
+                            }
+
+
+
+
+
+
+
+
+                        }
+
+                    }
+
+                }
+                },
+                bottomBar = {
+                    //BottomBarLayout()
+                }
+                )
             }
-        )
+
     }
 
-}
+    @Preview
+    @Composable
+    private fun TopBarLayout() {
+        TopAppBar(title = {
+            Text(stringResource(R.string.app_name))
+        }, backgroundColor = colorResource(R.color.lavender_blush), elevation = 2.dp)
+    }
 
-@Preview
-@Composable
-private fun TopBarLayout() {
-    TopAppBar(title = {
-        Text(stringResource(R.string.app_name))
-    }, backgroundColor = colorResource(R.color.lavender_blush), elevation = 2.dp)
-}
+    @Preview
+    @Composable
+    fun BottomBarLayout() {
 
-@Preview
-@Composable
-fun BottomBarLayout() {
-
-    BottomAppBar(
-        backgroundColor = colorResource(R.color.lavender_blush),
-        cutoutShape = CircleShape
-    ) {
-        IconButton(onClick = {
-            //   scaffoldState.drawerState.open()
-        }) {
-            Icon(Icons.Filled.Menu, "MenuIcon")
+        BottomAppBar(
+            backgroundColor = colorResource(R.color.lavender_blush),
+            cutoutShape = CircleShape
+        ) {
+            IconButton(onClick = {
+                //   scaffoldState.drawerState.open()
+            }) {
+                Icon(Icons.Filled.Menu, "MenuIcon")
+            }
         }
     }
-}
 
-@Composable
-fun TaskListContent(tasksList: List<TaskOrder>, onEditItmClicked: (TaskOrder) -> Unit) {
+    @Composable
+    fun TaskListContent(tasksList: List<UITaskRecord>, onEditItmClicked: (UITaskRecord) -> Unit) {
 
-    if (tasksList.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(text = stringResource(R.string.no_item_created), fontSize = 24.sp)
-        }
-    } else {
+
         LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .background(colorResource(R.color.raisin_black).copy(0.00f))
         ) {
 
             items(tasksList) { task ->
 
                 TaskItem(task,
-                    onTaskClick = {},
-                    onTaskEditClick = { onEditItmClicked(task) })
+                    onClick = {},
+                    onEditClick = { onEditItmClicked(task) })
 
 
             }
 
+
         }
     }
-}
 
 
-@Composable
-fun ActionButtons(
-    onAddNewTaskItem: () -> Unit,
-    onExecuteTasksClicked: () -> Unit
-) {
-
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(bottom = 64.dp)
+    @Composable
+    fun ActionButtons(
+        onAddNewTaskItem: () -> Unit,
+        onExecuteTasksClicked: () -> Unit
     ) {
 
-        FloatingActionButton(
-            onClick = { onAddNewTaskItem() },
-            backgroundColor = colorResource(R.color.fiery_rose)
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(bottom = 64.dp)
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "Make a move")
-        }
+
+            FloatingActionButton(
+                onClick = { onAddNewTaskItem() },
+                backgroundColor = colorResource(R.color.fiery_rose)
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Make a move")
+            }
 
 
-        Spacer(modifier = Modifier.padding(8.dp))
+            Spacer(modifier = Modifier.padding(8.dp))
 
-        FloatingActionButton(
-            modifier = Modifier.size(32.dp),
-            onClick = { onExecuteTasksClicked() },
-            backgroundColor = colorResource(R.color.jet)
-        ) {
-            Icon(
-                Icons.Filled.Done,
-                contentDescription = "Execute",
-                tint = colorResource(R.color.lavender_blush)
-            )
+            FloatingActionButton(
+                modifier = Modifier.size(32.dp),
+                onClick = { onExecuteTasksClicked() },
+                backgroundColor = colorResource(R.color.jet)
+            ) {
+                Icon(
+                    Icons.Filled.Done,
+                    contentDescription = "Execute",
+                    tint = colorResource(R.color.lavender_blush)
+                )
+            }
         }
     }
-}
