@@ -2,6 +2,7 @@ package com.example.fileorganizer.ui
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,6 +42,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
 
     var itemToEdit: UITaskRecord? by remember { mutableStateOf(null) }
+    var itemToRemove: UITaskRecord? by remember { mutableStateOf(null) }
 
     AppTheme {
         Scaffold(
@@ -71,40 +73,58 @@ fun MainScreen(viewModel: MainViewModel) {
                             val mainState = (mainState as MainState.Success)
                             val records = mainState.records
                             val isEditDialogOpen = remember { mutableStateOf(false) }
+                            val isRemovalDialogOpen = remember { mutableStateOf(false) }
 
                             if (records.isEmpty())
                                 EmptyContentScreen()
                              else
                                  TaskListContent(
-                                    records,
+                                   tasksList =  records,
                                     onEditItmClicked = { clickedTask ->
 
                                         itemToEdit = clickedTask
 
                                         isEditDialogOpen.value = true
+                                    },
+                                 onRemoveItem = { itemToBeRemoved ->
+                                     itemToRemove = itemToBeRemoved
+                                     isRemovalDialogOpen.value = true
+
+                                 })
+
+
+
+                            AnimatedVisibility (isAddDialogOpen.value) {
+                                AddTaskDialog(onTaskItemAdded = { itemToAdd ->
+                                    viewModel.addTask(itemToAdd)
+                                },
+                                    onFieldsLeftBlank = {
+                                        showMissingFieldError = !showMissingFieldError
+                                    }, onDissmiss = { isAddDialogOpen.value = false })
+                            }
+
+                            AnimatedVisibility (isEditDialogOpen.value && itemToEdit != null) {
+                                EditTaskDialog(
+                                    taskRecord = itemToEdit ?: return@AnimatedVisibility,
+                                    onSaveUpdates = { viewModel.updateItem(it) },
+                                    onFieldsLeftBlank = {
+                                        showMissingFieldError = !showMissingFieldError
+                                    }, onDismiss = {
+                                        isEditDialogOpen.value = false
+                                        itemToEdit = null
                                     })
+                            }
 
-
-
-                            if (isAddDialogOpen.value) AddTaskDialog(onTaskItemAdded = { itemToAdd ->
-                                viewModel.addTask(itemToAdd)
-                            },
-                                onFieldsLeftBlank = {
-                                    showMissingFieldError = !showMissingFieldError
-                                }, onDissmiss = { isAddDialogOpen.value = false })
-
-                            if (isEditDialogOpen.value && itemToEdit != null) EditTaskDialog(
-                                taskRecord = itemToEdit ?: return@Box,
-                                onSaveUpdates = { viewModel.updateItem(it) },
-                                onFieldsLeftBlank = {
-                                    showMissingFieldError = !showMissingFieldError
-                                }, onDismiss = {
-                                    isEditDialogOpen.value = false
-                                    itemToEdit = null
+                            AnimatedVisibility (isRemovalDialogOpen.value && itemToRemove != null){
+                                RemovalDialog(item = itemToRemove ?: return@AnimatedVisibility, onConfirm = {viewModel.removeItem(itemToRemove ?: return@RemovalDialog)
+                                                                                                            itemToRemove = null}, onDismiss =  {
+                                    isRemovalDialogOpen.value = false
+                                    itemToRemove = null
                                 })
+                            }
 
 
-                            if (showMissingFieldError) {
+                            AnimatedVisibility (showMissingFieldError) {
                                 MissingFieldDialog("Please, verify all inputs are filled", onDismiss = { showMissingFieldError = false})
                             }
 
@@ -156,6 +176,43 @@ private fun MissingFieldDialog(message: String, onDismiss:()->Unit) {
         })
 }
 
+@Composable
+fun RemovalDialog(item: UITaskRecord, onConfirm:()->Unit,onDismiss:()->Unit) {
+    AlertDialog(onDismissRequest = { onDismiss( )},
+        title = { Text("Remove item with type ${item.extension}") },
+        text = { Text(text = "Are you sure to permanently remove this item ?") },
+        buttons = {
+            Row(
+                Modifier.fillMaxWidth()
+                    .padding(end = 12.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = {
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        contentColor = colorResource(R.color.fiery_rose),
+                        backgroundColor = Color.LightGray.copy(0.0f)
+                    )
+                ) {
+                    Text("Cancel")
+                }
+                TextButton(
+                    onClick = {
+                        onConfirm()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        contentColor = Color.LightGray,
+                        backgroundColor = Color.Red
+                    )
+                ) {
+                    Text("Delete")
+                }
+            }
+        })
+}
+
 @Preview
 @Composable
 private fun TopBarLayout() {
@@ -181,7 +238,7 @@ fun BottomBarLayout() {
 }
 
 @Composable
-fun TaskListContent(tasksList: List<UITaskRecord>, onEditItmClicked: (UITaskRecord) -> Unit) {
+fun TaskListContent(tasksList: List<UITaskRecord>, onEditItmClicked: (UITaskRecord) -> Unit, onRemoveItem:(UITaskRecord) -> Unit) {
 
 
     LazyColumn(
@@ -193,8 +250,8 @@ fun TaskListContent(tasksList: List<UITaskRecord>, onEditItmClicked: (UITaskReco
         items(tasksList) { task ->
 
             TaskItem(task,
-                onClick = {},
-                onEditClick = { onEditItmClicked(task) })
+                onClick = { onEditItmClicked(task) },
+                onRemoveClick = { onRemoveItem(task) })
 
 
         }
