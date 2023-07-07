@@ -6,14 +6,34 @@ import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.*
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Icon
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
+import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DoubleArrow
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,31 +48,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import com.example.fileorganizer.TaskRecord.Companion.EMPTY_ITEM
 import com.example.fileorganizer.model.UITaskRecord
 
 
 @Composable
-fun AddTaskDialog(
-    onTaskItemAdded: (TaskRecord) -> Unit,
-    onFieldsLeftBlank: () -> Unit,
-    onDissmiss: () -> Unit
+fun AddTaskDialog(item: UITaskRecord? = null,
+                  onAddItem: (String, String, String) -> Unit,
+                  onFieldsLeftBlank: (UITaskRecord) -> Unit,
+                  onDissmiss: () -> Unit
 ) {
 
 
-    var newTask = EMPTY_ITEM
+    var extension= item?.extension ?: ""
+
+    var source = item?.source ?: ""
+
+    var destination= item?.destination ?: ""
+
 
 
     AlertDialog(onDismissRequest = { onDissmiss() },
         title = { Text("Add new item") },
         //alert dialog content/body goes in here
         text = {
-            TaskForm(
-                onDestinationUriChange = { newTask = newTask.copy(destination = it) },
+            TaskForm(taskToBeEdited = item,
+                onDestinationUriChange = { destination = it },
                 onSourceUriChange = {
-                    newTask = newTask.copy(source = it)
+                   source = it
                 },
-                onTypeChange = { newTask = newTask.copy(extension = it) })
+                onTypeChange = { extension = it })
         },
         buttons = {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -69,10 +93,11 @@ fun AddTaskDialog(
                 }
                 TextButton(
                     onClick = {
-                        if (newTask.extension.isEmpty() or newTask.source.isEmpty() or newTask.destination.isEmpty()) {
-                            onFieldsLeftBlank()
+                        if (extension.isEmpty() or source.isEmpty() or destination.isEmpty()) {
+                            onFieldsLeftBlank(UITaskRecord(extension = extension, source =  source,destination
+                                    = destination,id = item?.id ?: 0 ))
                         } else {
-                            onTaskItemAdded(newTask)
+                            onAddItem(extension,source,destination)
                             onDissmiss()
                         }
 
@@ -93,7 +118,7 @@ fun AddTaskDialog(
 fun EditTaskDialog(
     taskRecord: UITaskRecord,
     onSaveUpdates: (UITaskRecord) -> Unit,
-    onFieldsLeftBlank: () -> Unit,
+    onFieldsLeftBlank: (UITaskRecord) -> Unit,
     onDismiss: () -> Unit
 ) {
     var updatedItem: UITaskRecord by remember(taskRecord) { mutableStateOf(taskRecord) }
@@ -105,12 +130,12 @@ fun EditTaskDialog(
         text = {
             TaskForm(
                 onSourceUriChange = {
-                    updatedItem = updatedItem.copy(source = it, id = taskRecord.id)
+                    updatedItem = updatedItem.copy(source = it)
 
 
                 },
                 onDestinationUriChange = {
-                    updatedItem = updatedItem.copy(destination = it, id = taskRecord.id)
+                    updatedItem = updatedItem.copy(destination = it)
                 },
                 taskToBeEdited = updatedItem,
                 onTypeChange = { updatedItem = updatedItem.copy(extension = it) })
@@ -131,7 +156,7 @@ fun EditTaskDialog(
                 TextButton(
                     onClick = {
                         if (updatedItem.extension.isEmpty() or updatedItem.source.isEmpty() or updatedItem.destination.isEmpty()) {
-                            onFieldsLeftBlank()
+                            onFieldsLeftBlank(updatedItem)
                         } else {
                             onSaveUpdates(updatedItem)
                             onDismiss()

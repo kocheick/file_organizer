@@ -6,8 +6,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Checkbox
+import androidx.compose.material.CheckboxColors
+import androidx.compose.material.CheckboxDefaults
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.RadioButton
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DeleteForever
@@ -30,7 +34,8 @@ import com.example.fileorganizer.model.UITaskRecord
 fun TaskItem(
     task: UITaskRecord,
     onClick: () -> Unit = {},
-    onRemoveClick: () -> Unit = {}
+    onRemoveClick: () -> Unit = {},
+    onToggleState:()->Unit ={}
 ) {
 
     val nmbrOfChrs = task.extension.length
@@ -98,6 +103,11 @@ fun TaskItem(
                 FolderPath("to", destinationFolder)
             }
         }
+        //selection state, check button
+        
+        Checkbox(checked  =task.isActive , onCheckedChange = { onToggleState() }, colors = CheckboxDefaults.colors(checkedColor = colorResource(
+            id = R.color.fiery_rose
+        )))
 
         //Edit button
         IconButton(onClick = {

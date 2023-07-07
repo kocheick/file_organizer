@@ -6,6 +6,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.*
 import com.example.fileorganizer.TaskRecord
+import com.example.fileorganizer.TaskRecord.Companion.EMPTY_ITEM
 import com.example.fileorganizer.data.repository.Repository
 import com.example.fileorganizer.model.MainState
 import com.example.fileorganizer.model.UITaskRecord
@@ -17,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class MainViewModel(private val repository: Repository, private val fileMover: FileMover) :
@@ -36,8 +38,17 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
     val mainState = _state.asStateFlow()
 
     init {
+        wtihSamples()
         initTasks()
 
+    }
+
+    private fun wtihSamples() {
+        deleteAll()
+        var count = 0
+        repeat(15){
+            viewModelScope.launch{ repository.addTask(TaskRecord.EMPTY_ITEM) }
+        }
     }
 
     fun initTasks() {
@@ -54,49 +65,51 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
         }
     }
 
-        //        deleteAll()
-        fun getTaskById(id: Int): TaskRecord {
-            var task: TaskRecord = TaskRecord.EMPTY_ITEM
-            viewModelScope.launch(IO) {
-                task = repository.getTaskbyId(id) ?: return@launch
-            }
-
-            return task
-
+    //        deleteAll()
+    fun getTaskById(id: Int): TaskRecord {
+        var task: TaskRecord = TaskRecord.EMPTY_ITEM
+        viewModelScope.launch(IO) {
+            task = repository.getTaskbyId(id) ?: return@launch
         }
 
-        fun addTask(taskRecord: TaskRecord) {
-            viewModelScope.launch(IO) {
-                repository.addTask(taskRecord)
-            }
+        return task
+
+    }
+
+    fun addTask(extension:String, source:String,destination:String) {
+        viewModelScope.launch(IO+coroutineExceptionHandler) {
+            repository.addTask(EMPTY_ITEM.copy(extension= extension,source= source,destination = destination))
+        }
 
 //        initTasks()
-        }
+    }
+
     fun updateItem(itemToBeUpdated: UITaskRecord) {
 
-            viewModelScope.launch(IO+coroutineExceptionHandler) {
-                val old = getTaskById(itemToBeUpdated.id)
-                println("updating item ${itemToBeUpdated.id} from  $old to ${itemToBeUpdated}")
+        viewModelScope.launch(IO + coroutineExceptionHandler) {
+            val old = getTaskById(itemToBeUpdated.id)
+            println("updating item ${itemToBeUpdated.id} from  $old to ${itemToBeUpdated}")
 
-                repository.updateTask(itemToBeUpdated.toTaskRecord())
+            repository.updateTask(itemToBeUpdated.toTaskRecord())
 
-            }
+        }
 
 
     }
 
-    fun removeItem(itemToBeDeleted : UITaskRecord) = viewModelScope.launch(IO + coroutineExceptionHandler){
-        repository.deleteTask(itemToBeDeleted.toTaskRecord())
-    }
-        fun deleteAll() = viewModelScope.launch { repository.deleteAll() }
+    fun removeItem(itemToBeDeleted: UITaskRecord) =
+        viewModelScope.launch(IO + coroutineExceptionHandler) {
+            repository.deleteTask(itemToBeDeleted.toTaskRecord())
+        }
 
-        @RequiresApi(Build.VERSION_CODES.R)
-        fun processTasks() {
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    _tasks.forEach { task ->
+    fun deleteAll() = viewModelScope.launch { repository.deleteAll() }
 
-                        fileMover.moveFiles(task.source, task.destination, task.extension)
+    @RequiresApi(Build.VERSION_CODES.R)
+    fun processTasks() {
+        viewModelScope.launch(IO+coroutineExceptionHandler) {
+                _tasks.filter { it.isActive }.forEach { task ->
+
+                    fileMover.moveFiles(task.source, task.destination, task.extension)
 //                    val sourceFiles =
 //                        withContext(Dispatchers.IO) { (fileMover.getFiles(task.from, task.type)) }
 //                    println(sourceFiles)
@@ -106,14 +119,16 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
 //                            fileMover.moveFile(it, task.to)
 //                        }
 //                    }
-                    }
-                } catch (e: Exception) {
-                    println("${e.message}")
                 }
-            }
+
         }
-
-
-
-
     }
+
+    fun toggleStateFor(itemToBeToggled: UITaskRecord) {
+        viewModelScope.launch(IO + coroutineExceptionHandler) {
+            repository.updateTask(itemToBeToggled.toTaskRecord().copy(isActive = !itemToBeToggled.isActive))
+        }
+    }
+
+
+}

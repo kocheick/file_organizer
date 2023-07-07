@@ -13,11 +13,12 @@ data class TaskRecord(
     @ColumnInfo(name = "type_or_extension") val extension: String,
     @ColumnInfo(name = "source_uri") val source: String,
     @ColumnInfo(name = "destination_uri") val destination: String,
+    @ColumnInfo(name = "is_active") val isActive: Boolean,
     @PrimaryKey(autoGenerate = true)
     val id: Int
 ) {
     companion object {
-        val EMPTY_ITEM = TaskRecord("", "", "",0)
+        val EMPTY_ITEM = TaskRecord("", "", "",false,0)
     }
 
     fun toUITaskRecord(): UITaskRecord {
@@ -25,7 +26,7 @@ data class TaskRecord(
 //        val sourceFolder = formatUriToUIString(source)
 //        val destinationFolder = formatUriToUIString(destination)
 
-        return UITaskRecord(fileType, source, destination, id)
+        return UITaskRecord(fileType, source, destination,isActive, id)
     }
 }
 
