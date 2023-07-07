@@ -1,6 +1,7 @@
 package com.example.fileorganizer.ui.viewmodel
 
 import android.os.Build
+import android.provider.Contacts.Intents.UI
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.*
@@ -71,7 +72,22 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
 
 //        initTasks()
         }
+    fun updateItem(itemToBeUpdated: UITaskRecord) {
 
+            viewModelScope.launch(IO+coroutineExceptionHandler) {
+                val old = getTaskById(itemToBeUpdated.id)
+                println("updating item ${itemToBeUpdated.id} from  $old to ${itemToBeUpdated}")
+
+                repository.updateTask(itemToBeUpdated.toTaskRecord())
+
+            }
+
+
+    }
+
+    fun removeItem(itemToBeDeleted : UITaskRecord) = viewModelScope.launch(IO + coroutineExceptionHandler){
+        repository.deleteTask(itemToBeDeleted.toTaskRecord())
+    }
         fun deleteAll() = viewModelScope.launch { repository.deleteAll() }
 
         @RequiresApi(Build.VERSION_CODES.R)
@@ -97,22 +113,7 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
             }
         }
 
-        fun updateItem(itemToBeUpdated: UITaskRecord) {
 
-            try {
-                viewModelScope.launch(Dispatchers.IO) {
-                    val old = getTaskById(itemToBeUpdated.id)
-                    println("updating item ${itemToBeUpdated.id} from  $old to ${itemToBeUpdated}")
-
-                    repository.updateTask(itemToBeUpdated.toTaskRecord())
-
-                }
-//            initTasks()
-            } catch (e: Exception) {
-                println(e.message)
-            }
-
-        }
 
 
     }
