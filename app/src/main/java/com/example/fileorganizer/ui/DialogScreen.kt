@@ -34,138 +34,140 @@ import com.example.fileorganizer.model.UITaskRecord
 
 @Composable
 fun AddTaskDialog(
-    openDialog: MutableState<Boolean>,
     onTaskItemAdded: (TaskRecord) -> Unit,
-    onFieldsLeftBlank:()->Unit
+    onFieldsLeftBlank: () -> Unit,
+    onDissmiss: () -> Unit
 ) {
 
 
     var newTask = EMPTY_ITEM
 
 
-    if (openDialog.value) {
-        AlertDialog(onDismissRequest = { openDialog.value = false },
-            title = { Text("Add new item") },
-            //alert dialog content/body goes in here
-            text = {
-                TaskForm(onDestinationUriChange = {newTask = newTask.copy(destination = it)}, onSourceUriChange = {
+    AlertDialog(onDismissRequest = { onDissmiss() },
+        title = { Text("Add new item") },
+        //alert dialog content/body goes in here
+        text = {
+            TaskForm(
+                onDestinationUriChange = { newTask = newTask.copy(destination = it) },
+                onSourceUriChange = {
                     newTask = newTask.copy(source = it)
-                }, onTypeChange = { newTask = newTask.copy(extension = it) })
-            },
-            buttons = {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(
-                        onClick = {
-                            openDialog.value = false
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            contentColor = colorResource(R.color.fiery_rose),
-                            backgroundColor = Color.LightGray.copy(0.0f)
-                        )
-                    ) {
-                        Text("Cancel")
-                    }
-                    TextButton(
-                        onClick = {
-                            if (newTask.extension.isEmpty() or newTask.source.isEmpty() or newTask.destination.isEmpty()){
-                                onFieldsLeftBlank()
-                            }else {
-                                onTaskItemAdded(newTask)
-                                openDialog.value = false
-                            }
+                },
+                onTypeChange = { newTask = newTask.copy(extension = it) })
+        },
+        buttons = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(
+                    onClick = {
+                        onDissmiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        contentColor = colorResource(R.color.fiery_rose),
+                        backgroundColor = Color.LightGray.copy(0.0f)
+                    )
+                ) {
+                    Text("Cancel")
+                }
+                TextButton(
+                    onClick = {
+                        if (newTask.extension.isEmpty() or newTask.source.isEmpty() or newTask.destination.isEmpty()) {
+                            onFieldsLeftBlank()
+                        } else {
+                            onTaskItemAdded(newTask)
+                            onDissmiss()
+                        }
 
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            contentColor = colorResource(R.color.jet),
-                            backgroundColor = Color.LightGray.copy(0.0f)
-                        )
-                    ) {
-                        Text("Add")
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        contentColor = colorResource(R.color.jet),
+                        backgroundColor = Color.LightGray.copy(0.0f)
+                    )
+                ) {
+                    Text("Add")
                 }
             }
-        )
-    } else {
-        openDialog.value = false
-    }
+        }
+    )
 }
 
 @Composable
 fun EditTaskDialog(
     taskRecord: UITaskRecord,
-    isDialogOpen: MutableState<Boolean>,
     onSaveUpdates: (UITaskRecord) -> Unit,
-    onFieldsLeftBlank:()->Unit
+    onFieldsLeftBlank: () -> Unit,
+    onDismiss: () -> Unit
 ) {
-    var updatedItem: UITaskRecord by  remember(taskRecord){ mutableStateOf(taskRecord) }
+    var updatedItem: UITaskRecord by remember(taskRecord) { mutableStateOf(taskRecord) }
 
 
-    if (isDialogOpen.value) {
-        AlertDialog(onDismissRequest = { isDialogOpen.value = false },
-            title = { Text("Edit item") },
-            //alert dialog content/body goes in here
-            text = {
-                TaskForm(onSourceUriChange = { updatedItem = updatedItem.copy(source = it, id = taskRecord?.id ?: 0)
+    AlertDialog(onDismissRequest = { onDismiss() },
+        title = { Text("Edit item") },
+        //alert dialog content/body goes in here
+        text = {
+            TaskForm(
+                onSourceUriChange = {
+                    updatedItem = updatedItem.copy(source = it, id = taskRecord.id)
 
 
-                }, onDestinationUriChange = {updatedItem = updatedItem.copy(destination = it, id = taskRecord?.id ?: 0) }
-                    , taskToBeEdited = updatedItem,
+                },
+                onDestinationUriChange = {
+                    updatedItem = updatedItem.copy(destination = it, id = taskRecord.id)
+                },
+                taskToBeEdited = updatedItem,
                 onTypeChange = { updatedItem = updatedItem.copy(extension = it) })
-            },
-            buttons = {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(
-                        onClick = {
-                            isDialogOpen.value = false
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            contentColor = colorResource(R.color.fiery_rose),
-                            backgroundColor = Color.LightGray.copy(0.0f)
-                        )
-                    ) {
-                        Text("Cancel")
-                    }
-                    TextButton(
-                        onClick = {
-                            if (updatedItem.extension.isEmpty() or updatedItem.source.isEmpty() or updatedItem.destination.isEmpty()){
-                                onFieldsLeftBlank()
-                            }else {
-                                onSaveUpdates(updatedItem)
-                                isDialogOpen.value = false
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            contentColor = colorResource(R.color.jet),
-                            backgroundColor = Color.LightGray.copy(0.0f)
-                        )
-                    ) {
-                        Text("Save")
-                    }
+        },
+        buttons = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(
+                    onClick = {
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        contentColor = colorResource(R.color.fiery_rose),
+                        backgroundColor = Color.LightGray.copy(0.0f)
+                    )
+                ) {
+                    Text("Cancel")
+                }
+                TextButton(
+                    onClick = {
+                        if (updatedItem.extension.isEmpty() or updatedItem.source.isEmpty() or updatedItem.destination.isEmpty()) {
+                            onFieldsLeftBlank()
+                        } else {
+                            onSaveUpdates(updatedItem)
+                            onDismiss()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        contentColor = colorResource(R.color.jet),
+                        backgroundColor = Color.LightGray.copy(0.0f)
+                    )
+                ) {
+                    Text("Save")
                 }
             }
-        )
-    } else {
-        isDialogOpen.value = false
-    }
+        }
+    )
+
 }
 
 @Composable
 fun TaskForm(
-    taskToBeEdited: UITaskRecord? = null
-    , onSourceUriChange:(String)->Unit
-    , onDestinationUriChange:(String)->Unit
-    , onTypeChange:(String)->Unit) {
-    val src = if (taskToBeEdited != null ) Uri.decode(taskToBeEdited.source) else null
+    taskToBeEdited: UITaskRecord? = null,
+    onSourceUriChange: (String) -> Unit,
+    onDestinationUriChange: (String) -> Unit,
+    onTypeChange: (String) -> Unit
+) {
+    val src = if (taskToBeEdited != null) Uri.decode(taskToBeEdited.source) else null
     val dest = if (taskToBeEdited != null) Uri.decode(taskToBeEdited.destination) else null
 
-    val sourcePath = remember { mutableStateOf(src ?:  "No folder selected") }
-    val destPath = remember { mutableStateOf(dest ?:  "No folder selected") }
+    val sourcePath = remember { mutableStateOf(src ) }
+    val destPath = remember { mutableStateOf(dest) }
 
-    val sourceDirectoryPickerLauncher = pickDirectory(sourcePath)
-    val destinationDirectoryPickerLauncher = pickDirectory(destPath)
+    val sourceDirectoryPickerLauncher = pickDirectory({ sourcePath.value = it })
+    val destinationDirectoryPickerLauncher = pickDirectory({ destPath.value = it })
 
-    val formattedSource =  Utility.formatUriToUIString(sourcePath.value)
-    val formattedDestination = Utility.formatUriToUIString(destPath.value)
+    val formattedSource = Utility.formatUriToUIString(sourcePath.value ?: "No folder selected")
+    val formattedDestination = Utility.formatUriToUIString(destPath.value ?: "No folder selected")
 
     val typeTextState = remember { mutableStateOf(TextFieldValue(taskToBeEdited?.extension ?: "")) }
 
@@ -174,7 +176,7 @@ fun TaskForm(
 
 
     val propsText =
-        if (taskToBeEdited != null) "Enter new file type, current -> ${taskToBeEdited.extension.uppercase()}" else "Enter file Extension or Type  :  ${typeTextState.value.text.uppercase()}"
+        if (taskToBeEdited != null) "Update file type, current -> ${taskToBeEdited.extension.uppercase()}" else "Enter file Extension or Type  :  ${typeTextState.value.text.uppercase()}"
 
 
 
@@ -208,88 +210,29 @@ fun TaskForm(
         )
 // PICK SOURCE BUTTON
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(2.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            //source folder button
-
-            TextButton(
-                onClick = {
-                    sourceDirectoryPickerLauncher.launch("".toUri())
-                },
-                colors = ButtonDefaults
-                    .buttonColors(
-                        backgroundColor = colorResource(R.color.fiery_rose),
-                        contentColor = colorResource(R.color.white)
-                    )
-            ) {
-                Text(stringResource(R.string.source), textAlign = TextAlign.Center)
-            }
-
-            Text(
-                formattedSource, maxLines = 2
-            )
-        }
+        FolderPickerButton(
+            buttonText = stringResource(R.string.source),
+            path = formattedSource,
+            onPick = { sourceDirectoryPickerLauncher.launch(src?.toUri() ?: "".toUri()) }
+        )
         // SWAP BUTTON
-            Button(
-                enabled = !sourcePath.value.isNullOrEmpty() or !destPath.value.isNullOrEmpty(),
-                onClick = { swipePath(sourcePath, destPath) },
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .wrapContentSize()
-                    .padding(vertical = 8.dp)
-                    .clip(RoundedCornerShape(24.dp)),
-
-                ) {
-                Column{
-                    Row {
-                        Icon(
-                            Icons.Rounded.DoubleArrow, modifier = Modifier
-                                .rotate(90F)
-                                .wrapContentSize(),
-                            contentDescription = stringResource(id = R.string.reverse_button)
-                        )
-                        Icon(
-                            Icons.Rounded.DoubleArrow, modifier = Modifier
-                                .rotate(-90F)
-                                .wrapContentSize(),
-                            contentDescription = stringResource(id = R.string.reverse_button)
-                        )
-                    }
-                    Text("swap path", fontWeight = FontWeight.Light, fontSize = 8.sp)
-                }
-            }
+        SwapPathsButton(
+            modifier =  Modifier.align(Alignment.End),
+            isActive = !sourcePath.value.isNullOrEmpty() or !destPath.value.isNullOrEmpty(),
+            onClick = { swipePath(sourcePath as MutableState<String>, destPath as MutableState<String>) }
+        )
 
 // PICK DEST BUTTON
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            //destination folder button
 
-            TextButton(
-                onClick = { destinationDirectoryPickerLauncher.launch("".toUri())
-                          },
-                colors = ButtonDefaults
-                    .buttonColors(
-                        backgroundColor = colorResource(R.color.fiery_rose),
-                        contentColor = colorResource(R.color.white)
-                    )
-            ) {
-                Text(stringResource(R.string.destination), textAlign = TextAlign.Center)
-            }
-            Text(
-                formattedDestination, maxLines = 2
-            )
-        }
-        onSourceUriChange(sourcePath.value)
-        onDestinationUriChange(destPath.value)
+        FolderPickerButton(
+            buttonText = stringResource(R.string.destination),
+            path = formattedDestination,
+            onPick = {
+                destinationDirectoryPickerLauncher.launch(dest?.toUri() ?: "".toUri())
+            })
+
+        sourcePath.value?.let { onSourceUriChange(it) }
+        destPath.value?.let { onDestinationUriChange(it) }
         onTypeChange(typeText)
 
         println("your task ${taskToBeEdited}")
@@ -304,6 +247,75 @@ fun TaskForm(
 
 }
 
+@Composable
+private fun SwapPathsButton(modifier: Modifier, isActive:Boolean,
+                            onClick:()->Unit
+) {
+    Button(
+        enabled = isActive,
+        onClick = {onClick()},
+        modifier = modifier
+            .wrapContentSize()
+            .padding(vertical = 8.dp)
+            .clip(RoundedCornerShape(24.dp)),
+
+        ) {
+        Column(modifier= Modifier.wrapContentWidth(),horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Row {
+                Icon(
+                    Icons.Rounded.DoubleArrow, modifier = Modifier
+                        .rotate(90F)
+                        .wrapContentSize(),
+                    contentDescription = stringResource(id = R.string.reverse_button)
+                )
+                Icon(
+                    Icons.Rounded.DoubleArrow, modifier = Modifier
+                        .rotate(-90F)
+                        .wrapContentSize(),
+                    contentDescription = stringResource(id = R.string.reverse_button)
+                )
+            }
+            Text("swap paths", fontWeight = FontWeight.Light, fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+private fun FolderPickerButton(
+    buttonText: String,
+    path: String,
+    onPick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(2.dp),
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        TextButton(
+            modifier = Modifier
+                .defaultMinSize(minWidth = 110.dp)
+                .padding(end = 8.dp),
+            onClick = {
+                onPick()
+            },
+            colors = ButtonDefaults
+                .buttonColors(
+                    backgroundColor = colorResource(R.color.fiery_rose),
+                    contentColor = colorResource(R.color.white)
+                )
+        ) {
+            Text(buttonText, textAlign = TextAlign.Center)
+        }
+
+        Text(
+            path, maxLines = 2
+        )
+    }
+}
+
 private fun swipePath(
     sourcePath: MutableState<String>,
     destPath: MutableState<String>
@@ -315,7 +327,7 @@ private fun swipePath(
 
 
 @Composable
-fun pickDirectory(pathTextState: MutableState<String>): ManagedActivityResultLauncher<Uri?, Uri?> {
+fun pickDirectory(pickedUri: (String)->Unit): ManagedActivityResultLauncher<Uri?, Uri?> {
 
     val result =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -327,7 +339,7 @@ fun pickDirectory(pathTextState: MutableState<String>): ManagedActivityResultLau
                 println("your URI authority: ${it.authority}")
                 println("your URI encoded authority: ${it.encodedAuthority}")
                 println("your URI full: ${Uri.decode(it.toString())}")
-                pathTextState.value = Uri.decode(it.toString())
+                pickedUri(Uri.decode(it.toString()))
             }
         }
     return result
