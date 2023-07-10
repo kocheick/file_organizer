@@ -6,6 +6,7 @@ import androidx.lifecycle.*
 import com.example.fileorganizer.TaskRecord
 import com.example.fileorganizer.TaskRecord.Companion.EMPTY_ITEM
 import com.example.fileorganizer.data.repository.Repository
+import com.example.fileorganizer.model.EmptyContentException
 import com.example.fileorganizer.model.MainState
 import com.example.fileorganizer.model.UITaskRecord
 import com.example.fileorganizer.service.FileMover
@@ -24,6 +25,7 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
     ViewModel() {
 
 
+    private val DELAY_TIME: Long = 2800
     private var _tasks: MutableList<TaskRecord> = mutableListOf()
 
     private val _state: MutableStateFlow<MainState> = MutableStateFlow(MainState.Loading)
@@ -46,7 +48,7 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
     val itemToEdit = _itemToEdit.asStateFlow()
     private var _itemToRemove: MutableStateFlow<UITaskRecord?> = MutableStateFlow(null)
     val itemToRemove = _itemToRemove.asStateFlow()
-    private var _itemToAdd: MutableStateFlow<UITaskRecord?> = MutableStateFlow(null)
+    private var _itemToAdd: MutableStateFlow<UITaskRecord> = MutableStateFlow(UITaskRecord.EMPTY_OBJECT)
     val itemToAdd = _itemToAdd.asStateFlow()
 
     init {
@@ -76,7 +78,7 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
         _itemToEdit.update { item }
     }
 
-    fun onUpdateItemToAdd(item: UITaskRecord?) {
+    fun onUpdateItemToAdd(item: UITaskRecord) {
         _itemToAdd.update { item }
     }
 
@@ -88,7 +90,7 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
         _state.value = MainState.Loading
         viewModelScope.launch(Dispatchers.Unconfined + coroutineExceptionHandler) {
             //  for (i in  samples) addTask(i)
-            delay(3_000)
+            delay(DELAY_TIME)
 //            throw Exception("BOOM MISTAKE")
 
 
@@ -96,10 +98,9 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
                 viewModelScope,
                 SharingStarted.WhileSubscribed(), mutableListOf()
             ).collect { t ->
-                if (t.isNotEmpty()){
                     _tasks = t as MutableList<TaskRecord>
                     _state.value = MainState.Data(t.map { it.toUITaskRecord() })
-                }
+
             }
 
         }
@@ -126,6 +127,7 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
                     isActive = true
                 )
             )
+            _itemToAdd.update { UITaskRecord.EMPTY_OBJECT }
         }
     }
 
@@ -152,12 +154,20 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
 
     @RequiresApi(Build.VERSION_CODES.R)
     fun processTasks() {
-        _state.value = MainState.Loading
-        viewModelScope.launch(IO + coroutineExceptionHandler) {
-throw Exception("BOOOON")
-            _tasks.filter { it.isActive }.forEach { task ->
+            _state.value = MainState.Loading
 
-                fileMover.moveFiles(task.source, task.destination, task.extension.lowercase().trim())
+            viewModelScope.launch(IO + coroutineExceptionHandler) {
+                val items = _tasks.filter { it.isActive }
+                if (items.isNotEmpty()){
+                    delay(DELAY_TIME)
+
+                items.forEach { task ->
+
+                    fileMover.moveFiles(
+                        task.source,
+                        task.destination,
+                        task.extension.lowercase().trim()
+                    )
 //                    val sourceFiles =
 //                        withContext(Dispatchers.IO) { (fileMover.getFiles(task.from, task.type)) }
 //                    println(sourceFiles)
@@ -167,7 +177,10 @@ throw Exception("BOOOON")
 //                            fileMover.moveFile(it, task.to)
 //                        }
 //                    }
-            }
+                }
+                    _state.value = MainState.Data(_tasks.map { it.toUITaskRecord() },null )
+
+                }else throw EmptyContentException("No item to be processed.")
         }
 //            initTasksΩΩTasks()
     }

@@ -21,4 +21,6 @@
     <string name="no_folder_selected">No folder selected</string>
     <string name="enter_file_type">Enter file type</string>
     <string name="ok">Ok</string>
+    <string name="update_file_extension_or_type_current_is">"Update file type, current is "</string>
+    <string name="save">Save</string>
 </resources>

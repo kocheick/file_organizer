@@ -2,7 +2,9 @@ package com.example.fileorganizer.ui
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
@@ -14,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -21,8 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fileorganizer.*
 import com.example.fileorganizer.R
+import com.example.fileorganizer.Utility.emptyInteractionSource
+import com.example.fileorganizer.model.EmptyContentException
 import com.example.fileorganizer.model.MainState
-import com.example.fileorganizer.service.NoFileFoundException
+import com.example.fileorganizer.model.NoFileFoundException
 import com.example.fileorganizer.ui.components.NotificationDialog
 import com.example.fileorganizer.ui.components.LoadingScreen
 import com.example.fileorganizer.ui.viewmodel.MainViewModel
@@ -33,10 +38,11 @@ import com.example.fileorganizer.ui.viewmodel.MainViewModel
 fun MainScreen(viewModel: MainViewModel) {
 
     val mainState: MainState by viewModel.mainState.collectAsState()
+    val itemCount =
+        remember(mainState) { if (mainState is MainState.Data) (mainState as MainState.Data).records.size else 0 }
 
     val isAddDialogOpen = rememberSaveable { mutableStateOf(false) }
     var showMissingFieldError by remember { mutableStateOf(false) }
-
 
 
 //    var itemToEdit: UITaskRecord? by remember { mutableStateOf(null) }
@@ -45,16 +51,20 @@ fun MainScreen(viewModel: MainViewModel) {
     val itemToAdd by viewModel.itemToAdd.collectAsState()
 
 
+
     AppTheme {
         Scaffold(
             topBar = { TopBarLayout() },
             floatingActionButton = {
-                ActionButtons(
+                ActionButtons(itemCount = itemCount,
                     onAddNewTaskItem = {
                         isAddDialogOpen.value = true
                     },
 
-                    onExecuteTasksClicked = { viewModel.processTasks() })
+                    onExecuteTasksClicked = {
+                        println("main screen $itemCount")
+                        viewModel.processTasks()
+                    })
             },
             floatingActionButtonPosition = FabPosition.End,
             isFloatingActionButtonDocked = false,
@@ -67,6 +77,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         is MainState.Loading -> {
                             LoadingScreen()
                         }
+
                         is MainState.Data
                         -> {
                             val items = currentState.records
@@ -74,8 +85,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             val isEditDialogOpen = rememberSaveable { mutableStateOf(false) }
                             val isRemovalDialogOpen = rememberSaveable { mutableStateOf(false) }
 
-                            if (items.isEmpty())
-                                EmptyContentScreen()
+                            if (items.isEmpty()) EmptyContentScreen()
                             else {
                                 TaskListContent(
                                     tasksList = items,
@@ -95,10 +105,13 @@ fun MainScreen(viewModel: MainViewModel) {
 
 
 
-                                AnimatedVisibility(isEditDialogOpen.value && itemToEdit != null) {
+                                if ((isEditDialogOpen.value && itemToEdit != null)) AnimatedVisibility(
+                                    isEditDialogOpen.value
+                                ) {
                                     EditTaskDialog(
-                                        taskRecord = itemToEdit ?: return@AnimatedVisibility,
-                                        onSaveUpdates = { viewModel.updateItem(it) },
+                                        itemToBeEdited = itemToEdit ?: return@AnimatedVisibility,
+                                        onUpdateItem = { viewModel.updateItem(it) },
+                                        onSaveUpdates = {viewModel.onUpdateItemToEdit(it)},
                                         onFieldsLeftBlank = {
                                             viewModel.onUpdateItemToEdit(it)
                                             isEditDialogOpen.value = false
@@ -110,7 +123,9 @@ fun MainScreen(viewModel: MainViewModel) {
                                         })
                                 }
 
-                                AnimatedVisibility(isRemovalDialogOpen.value && itemToRemove != null) {
+                                if (isRemovalDialogOpen.value && itemToRemove != null) AnimatedVisibility(
+                                    isRemovalDialogOpen.value
+                                ) {
                                     RemovalDialog(
                                         item = itemToRemove ?: return@AnimatedVisibility,
                                         onConfirm = {
@@ -146,36 +161,50 @@ fun MainScreen(viewModel: MainViewModel) {
                         AddTaskDialog(onAddItem = { extension, src, dest ->
                             isAddDialogOpen.value = false
                             viewModel.addNewItemWith(extension, src, dest)
-                        }, item = itemToAdd,
-                            onFieldsLeftBlank = {
+                        },
+                            onSaveUpdates = {
                                 viewModel.onUpdateItemToAdd(it)
+                            },
+
+                            item = itemToAdd,
+                            onFieldsLeftBlank = {
                                 isAddDialogOpen.value = false
                                 showMissingFieldError = !showMissingFieldError
-                            }, onDissmiss = {
+                            }, onDismiss = {
                                 isAddDialogOpen.value = false
                                 // cpmment this line out will let user add new item from previous properties instead of blank/new item
-                                viewModel.onUpdateItemToAdd(null)
                             })
                     }
 
-                       if (mainState is MainState.Data) AnimatedVisibility((mainState as MainState.Data).exception != null ) {
-                           when(val exception = (mainState as MainState.Data).exception ) {
-                               is NoFileFoundException -> { NotificationDialog(title = "Result", message = exception.message
-                                   ?: return@AnimatedVisibility, onDismiss = {
-                                   viewModel.dismissError()
-                               })}
-                               else ->{
-                                   NotificationDialog(title = "Oops.. an error occurred.", message = exception?.message
-                                       ?: return@AnimatedVisibility, onDismiss = {
-                                       viewModel.dismissError()
-                                   })
-                               }
-                           }
+                    if (mainState is MainState.Data) AnimatedVisibility((mainState as MainState.Data).exception != null) {
+                        when (val exception = (mainState as MainState.Data).exception) {
+                            is NoFileFoundException -> {
+                                NotificationDialog(title = "Result", message = exception.message
+                                    ?: return@AnimatedVisibility, onDismiss = {
+                                    viewModel.dismissError()
+                                })
+                            }
 
+                            is EmptyContentException -> {
+                                NotificationDialog(title = "Alert", message = exception.message
+                                    ?: return@AnimatedVisibility, onDismiss = {
+                                    viewModel.dismissError()
+                                })
+                            }
+
+                            else -> {
+                                NotificationDialog(title = "Oops.. an error occurred.",
+                                    message = exception?.message
+                                        ?: return@AnimatedVisibility,
+                                    onDismiss = {
+                                        viewModel.dismissError()
+                                    })
+                            }
                         }
 
-                }
+                    }
 
+                }
 
 
             },
@@ -221,14 +250,23 @@ fun BottomBarLayout() {
 }
 
 
-
 @Composable
 fun ActionButtons(
+    itemCount: Int,
     onAddNewTaskItem: () -> Unit,
     onExecuteTasksClicked: () -> Unit
 ) {
 
+    val processBackgroundColor = remember { Animatable(initialValue = Color.LightGray.copy(0.8f)) }
 
+    LaunchedEffect(itemCount) {
+        if (itemCount > 0) {
+            processBackgroundColor.animateTo(Color(R.color.jet).copy(0.4f))
+        } else {
+            processBackgroundColor.animateTo(Color.LightGray)
+        }
+
+    }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(bottom = 64.dp)
@@ -245,14 +283,21 @@ fun ActionButtons(
         Spacer(modifier = Modifier.padding(8.dp))
 
         FloatingActionButton(
+            interactionSource = remember {
+                if (itemCount > 0)
+                    MutableInteractionSource()
+                else emptyInteractionSource
+            },
             modifier = Modifier.size(32.dp),
-            onClick = { onExecuteTasksClicked() },
-            backgroundColor = colorResource(R.color.jet)
+            onClick = {
+                onExecuteTasksClicked()
+            },
+            backgroundColor = processBackgroundColor.value,
         ) {
             Icon(
                 Icons.Filled.Done,
                 contentDescription = "Execute",
-                tint = colorResource(R.color.lavender_blush)
+                tint = Color.White.copy(0.8f)
             )
         }
     }

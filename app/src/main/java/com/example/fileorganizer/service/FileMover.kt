@@ -8,6 +8,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.documentfile.provider.DocumentFile
+import com.example.fileorganizer.model.NoFileFoundException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.*
@@ -221,7 +222,8 @@ println("file #$counter ${sourceFile.uri}")
                 }
             }
 
-            if (counter == 0)  {throw NoFileFoundException("No file found with $extension extension.")}
+            if (counter == 0)  {throw NoFileFoundException("No file found with $extension extension.")
+            }
 
 
     }
@@ -233,4 +235,3 @@ private fun Uri.isInDirectory(uriToSearchIn: Uri): Boolean {
     return true
 }
 
-data class NoFileFoundException(val errorMessage: String) : Exception(errorMessage)

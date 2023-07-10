@@ -1,5 +1,6 @@
 package com.example.fileorganizer
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -149,9 +150,11 @@ private fun FolderPath(source: String, path: String) {
 //        first + last
 //    } else destination.replaceFirst("/tree","Root")
 
-    val characterCount = path.length
+    val isRoot = Uri.parse(path).lastPathSegment.equals("primary:")
     val uiString = formatUriToUIString(path)
-    val formattedPath= if (characterCount > 50) uiString.substringBefore(">") +">...>"+uiString.substringAfterLast(">") else uiString
+    val characterCount = uiString.length
+
+    val formattedPath= if (isRoot)"Primary Root" else if (characterCount > 50) uiString.substringBefore(">") +">...>"+uiString.substringAfterLast(">") else uiString
 
     Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
 

@@ -10,6 +10,6 @@ data class UITaskRecord( val extension: String,
                            val id: Int) {
     fun toTaskRecord():TaskRecord = TaskRecord(extension, source, destination,isActive, id)
 companion object{
-    val EMPTY_OBJECT = UITaskRecord("","","", id = -1)
+    val EMPTY_OBJECT = UITaskRecord("","","", id = 0)
 }
 }

@@ -29,6 +29,7 @@ import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DoubleArrow
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,22 +54,34 @@ import com.example.fileorganizer.model.UITaskRecord
 
 @Composable
 fun AddTaskDialog(
-    item: UITaskRecord? = null,
+    item: UITaskRecord,
     onAddItem: (String, String, String) -> Unit,
-    onFieldsLeftBlank: (UITaskRecord) -> Unit,
-    onDissmiss: () -> Unit
+    onFieldsLeftBlank: () -> Unit,
+    onDismiss: () -> Unit,
+    onSaveUpdates: (UITaskRecord) -> Unit
 ) {
 
 
-    var extension by remember{ mutableStateOf( item?.extension ?: "") }
+    var extension by remember{ mutableStateOf(item.extension) }
 
-    var source = item?.source ?: ""
+    var source = item.source
 
-    var destination = item?.destination ?: ""
+    var destination = item.destination
 
+DisposableEffect(Unit){
+    onDispose {
+        onSaveUpdates(  item.copy(
+            extension = extension, source = source, destination
+            = destination, id = item.id
+        ))
+    }
+}
 
-
-    AlertDialog(onDismissRequest = { onDissmiss() },
+    AlertDialog(onDismissRequest = { onDismiss()
+        onSaveUpdates(  item.copy(
+            extension = extension, source = source, destination
+            = destination, id = item.id
+        ))      },
         title = { Text(stringResource(R.string.add_new_item)) },
         //alert dialog content/body goes in here
         text = {
@@ -79,7 +92,8 @@ fun AddTaskDialog(
                     source = it
                 },
                 onTypeChange = { extension = it },
-                extensionLabelText = stringResource(
+                extensionLabelText =
+                stringResource(
                     id = R.string.enter_file_extension_or_type_with,
                     extension.uppercase()
                 )
@@ -87,107 +101,146 @@ fun AddTaskDialog(
             )
         },
         buttons = {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(
-                    onClick = {
-                        onDissmiss()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        contentColor = colorResource(R.color.fiery_rose),
-                        backgroundColor = Color.LightGray.copy(0.0f)
-                    )
-                ) {
-                    Text(stringResource(id = R.string.cancel))
-                }
-                TextButton(
-                    onClick = {
-                        if (extension.isEmpty() or source.isEmpty() or destination.isEmpty()) {
-                            onFieldsLeftBlank(
-                                UITaskRecord(
-                                    extension = extension, source = source, destination
-                                    = destination, id = item?.id ?: 0
-                                )
-                            )
-                        } else {
-                            onAddItem(extension, source, destination)
+            CancelAndAddButtons(
+                onDismiss = {
+                    onDismiss()
+                    onSaveUpdates(UITaskRecord.EMPTY_OBJECT)
+                },
+                onAddClick = {
+                    if (extension.isEmpty() or source.isEmpty() or destination.isEmpty()) {
+                        onFieldsLeftBlank(
+                        )
+                        onSaveUpdates(  item.copy(
+                            extension = extension, source = source, destination
+                            = destination, id = item.id
+                        ))
+                    } else {
+                        onAddItem(extension, source, destination)
+                    }
 
-                        }
-
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        contentColor = colorResource(R.color.jet),
-                        backgroundColor = Color.LightGray.copy(0.0f)
-                    )
-                ) {
-                    Text(stringResource(id = R.string.add))
                 }
-            }
+            )
         }
     )
 }
 
+
+
 @Composable
 fun EditTaskDialog(
-    taskRecord: UITaskRecord,
+    itemToBeEdited: UITaskRecord,
+    onUpdateItem: (UITaskRecord) -> Unit,
     onSaveUpdates: (UITaskRecord) -> Unit,
     onFieldsLeftBlank: (UITaskRecord) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var updatedItem: UITaskRecord by remember(taskRecord) { mutableStateOf(taskRecord) }
 
+    var extension by remember{ mutableStateOf( itemToBeEdited.extension ) }
+    var source = itemToBeEdited.extension
+    var destination =itemToBeEdited.extension
 
+    DisposableEffect(Unit){
+        onDispose {
+            onSaveUpdates(  itemToBeEdited.copy(
+                extension = extension, source = source, destination
+                = destination, id = itemToBeEdited.id
+            ))
+        }
+    }
     AlertDialog(onDismissRequest = { onDismiss() },
         title = { Text("Edit item") },
         //alert dialog content/body goes in here
         text = {
             TaskForm(
                 onSourceUriChange = {
-                    updatedItem = updatedItem.copy(source = it)
+                    source =  it
 
 
                 },
                 onDestinationUriChange = {
-                    updatedItem = updatedItem.copy(destination = it)
+                    destination =  it
                 },
-                taskToBeEdited = updatedItem,
-                onTypeChange = { updatedItem = updatedItem.copy(extension = it) },
-                extensionLabelText = "Update file type, current -> ${updatedItem.extension.uppercase()}"
+                taskToBeEdited = itemToBeEdited,
+                onTypeChange = { extension =it },
+                extensionLabelText = stringResource(
+                    id = R.string.update_file_extension_or_type_current_is,
+                    itemToBeEdited.extension.uppercase()
+                )
             )
         },
         buttons = {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(
-                    onClick = {
-                        onDismiss()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        contentColor = colorResource(R.color.fiery_rose),
-                        backgroundColor = Color.LightGray.copy(0.0f)
-                    )
-                ) {
-                    Text("Cancel")
-                }
-                TextButton(
-                    onClick = {
-                        if (updatedItem.extension.isEmpty() or updatedItem.source.isEmpty() or updatedItem.destination.isEmpty()) {
-                            onFieldsLeftBlank(updatedItem)
-                        } else {
-                            onSaveUpdates(updatedItem)
-                            onDismiss()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        contentColor = colorResource(R.color.jet),
-                        backgroundColor = Color.LightGray.copy(0.0f)
-                    )
-                ) {
-                    Text("Save")
-                }
-            }
+            CancelAndSaveButtons(onDismiss,
+                onSaveUpdates = { if (extension.isEmpty() or source.isEmpty() or destination.isEmpty()) {
+                onFieldsLeftBlank(itemToBeEdited.copy(extension = extension, source =  source, destination =  destination))
+            } else {
+                onUpdateItem(itemToBeEdited.copy(extension = extension, source = source, destination =  destination))
+                onDismiss()
+            }})
         }
     )
 
 }
+@Composable
+private fun CancelAndAddButtons(
+    onDismiss: () -> Unit,
+    onAddClick: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        TextButton(
+            onClick = {
+                onDismiss()
+            },
+            colors = ButtonDefaults.buttonColors(
+                contentColor = colorResource(R.color.fiery_rose),
+                backgroundColor = Color.LightGray.copy(0.0f)
+            )
+        ) {
+            Text(stringResource(id = R.string.cancel))
+        }
+        TextButton(
+            onClick = {
+                onAddClick()
+            },
+            colors = ButtonDefaults.buttonColors(
+                contentColor = colorResource(R.color.jet),
+                backgroundColor = Color.LightGray.copy(0.0f)
+            )
+        ) {
+            Text(stringResource(id = R.string.add))
+        }
+    }
+}
+@Composable
+private fun CancelAndSaveButtons(
+    onDismiss: () -> Unit,
+    onSaveUpdates: () -> Unit
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        TextButton(
+            onClick = {
+                onDismiss()
+            },
+            colors = ButtonDefaults.buttonColors(
+                contentColor = colorResource(R.color.fiery_rose),
+                backgroundColor = Color.LightGray.copy(0.0f)
+            )
+        ) {
+            Text(stringResource(R.string.cancel))
+        }
+        TextButton(
+            onClick = {
+               onSaveUpdates()
+            },
+            colors = ButtonDefaults.buttonColors(
+                contentColor = colorResource(R.color.jet),
+                backgroundColor = Color.LightGray.copy(0.0f)
+            )
+        ) {
+            Text(stringResource(R.string.save))
+        }
+    }
+}
+
 @Composable
  fun MissingFieldDialog(message: String, onDismiss: () -> Unit) {
     AlertDialog(onDismissRequest = { onDismiss() },
@@ -273,13 +326,16 @@ fun TaskForm(
     val sourcePath = remember { mutableStateOf(src) }
     val destPath = remember { mutableStateOf(dest) }
 
+    val isRoot:(String?)->Boolean = { path-> if(path == null ) false else Uri.parse(path).lastPathSegment.equals("primary:") }
+
     val sourceDirectoryPickerLauncher = pickDirectory({ sourcePath.value = it })
     val destinationDirectoryPickerLauncher = pickDirectory({ destPath.value = it })
 
-    val formattedSource = Utility.formatUriToUIString(sourcePath.value ?: stringResource(R.string.no_folder_selected))
-    val formattedDestination = Utility.formatUriToUIString(destPath.value ?: stringResource(R.string.no_folder_selected))
+    val formattedSource = if (isRoot(sourcePath.value)) "Primary Root" else Utility.formatUriToUIString(sourcePath.value ?: stringResource(R.string.no_folder_selected))
+    val formattedDestination = if (isRoot(destPath.value)) "Primary Root" else Utility.formatUriToUIString(destPath.value ?: stringResource(R.string.no_folder_selected))
 
     val typeTextState = remember { mutableStateOf(TextFieldValue(taskToBeEdited?.extension ?: "")) }
+
 
 
     val typeText = typeTextState.value.text
