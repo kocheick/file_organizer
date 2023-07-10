@@ -62,26 +62,34 @@ fun AddTaskDialog(
 ) {
 
 
-    var extension by remember{ mutableStateOf(item.extension) }
+    var extension by remember { mutableStateOf(item.extension) }
 
     var source = item.source
 
     var destination = item.destination
+    var shouldBeEmpty by remember { mutableStateOf(false) }
 
-DisposableEffect(Unit){
-    onDispose {
-        onSaveUpdates(  item.copy(
-            extension = extension, source = source, destination
-            = destination, id = item.id
-        ))
+    DisposableEffect(Unit) {
+        onDispose {
+            if (shouldBeEmpty) onSaveUpdates(UITaskRecord.EMPTY_OBJECT)
+          else onSaveUpdates(
+                item.copy(
+                    extension = extension, source = source, destination
+                    = destination, id = item.id
+                )  )
+
+        }
     }
-}
 
-    AlertDialog(onDismissRequest = { onDismiss()
-        onSaveUpdates(  item.copy(
-            extension = extension, source = source, destination
-            = destination, id = item.id
-        ))      },
+    AlertDialog(onDismissRequest = {
+        onDismiss()
+        onSaveUpdates(
+            item.copy(
+                extension = extension, source = source, destination
+                = destination, id = item.id
+            )
+        )
+    },
         title = { Text(stringResource(R.string.add_new_item)) },
         //alert dialog content/body goes in here
         text = {
@@ -103,19 +111,21 @@ DisposableEffect(Unit){
         buttons = {
             CancelAndAddButtons(
                 onDismiss = {
+                    shouldBeEmpty = true
                     onDismiss()
-                    onSaveUpdates(UITaskRecord.EMPTY_OBJECT)
                 },
                 onAddClick = {
                     if (extension.isEmpty() or source.isEmpty() or destination.isEmpty()) {
-                        onFieldsLeftBlank(
+                        onFieldsLeftBlank()
+                        onSaveUpdates(
+                            item.copy(
+                                extension = extension, source = source, destination
+                                = destination, id = item.id
+                            )
                         )
-                        onSaveUpdates(  item.copy(
-                            extension = extension, source = source, destination
-                            = destination, id = item.id
-                        ))
                     } else {
                         onAddItem(extension, source, destination)
+                        onDismiss()
                     }
 
                 }
@@ -123,7 +133,6 @@ DisposableEffect(Unit){
         }
     )
 }
-
 
 
 @Composable
@@ -135,16 +144,21 @@ fun EditTaskDialog(
     onDismiss: () -> Unit
 ) {
 
-    var extension by remember{ mutableStateOf( itemToBeEdited.extension ) }
+    var extension by remember { mutableStateOf(itemToBeEdited.extension) }
     var source = itemToBeEdited.extension
-    var destination =itemToBeEdited.extension
+    var destination = itemToBeEdited.extension
 
-    DisposableEffect(Unit){
+    var shouldBeEmpty by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
         onDispose {
-            onSaveUpdates(  itemToBeEdited.copy(
-                extension = extension, source = source, destination
-                = destination, id = itemToBeEdited.id
-            ))
+            if (shouldBeEmpty) onSaveUpdates(UITaskRecord.EMPTY_OBJECT)
+            else onSaveUpdates(
+                itemToBeEdited.copy(
+                    extension = extension, source = source, destination
+                    = destination, id = itemToBeEdited.id
+                )  )
+
         }
     }
     AlertDialog(onDismissRequest = { onDismiss() },
@@ -153,15 +167,15 @@ fun EditTaskDialog(
         text = {
             TaskForm(
                 onSourceUriChange = {
-                    source =  it
+                    source = it
 
 
                 },
                 onDestinationUriChange = {
-                    destination =  it
+                    destination = it
                 },
                 taskToBeEdited = itemToBeEdited,
-                onTypeChange = { extension =it },
+                onTypeChange = { extension = it },
                 extensionLabelText = stringResource(
                     id = R.string.update_file_extension_or_type_current_is,
                     itemToBeEdited.extension.uppercase()
@@ -169,17 +183,35 @@ fun EditTaskDialog(
             )
         },
         buttons = {
-            CancelAndSaveButtons(onDismiss,
-                onSaveUpdates = { if (extension.isEmpty() or source.isEmpty() or destination.isEmpty()) {
-                onFieldsLeftBlank(itemToBeEdited.copy(extension = extension, source =  source, destination =  destination))
-            } else {
-                onUpdateItem(itemToBeEdited.copy(extension = extension, source = source, destination =  destination))
+            CancelAndSaveButtons(onDismiss={
+                shouldBeEmpty = true
                 onDismiss()
-            }})
+            },
+                onSaveUpdates = {
+                    if (extension.isEmpty() or source.isEmpty() or destination.isEmpty()) {
+                        onFieldsLeftBlank(
+                            itemToBeEdited.copy(
+                                extension = extension,
+                                source = source,
+                                destination = destination
+                            )
+                        )
+                    } else {
+                        onUpdateItem(
+                            itemToBeEdited.copy(
+                                extension = extension,
+                                source = source,
+                                destination = destination
+                            )
+                        )
+                        onDismiss()
+                    }
+                })
         }
     )
 
 }
+
 @Composable
 private fun CancelAndAddButtons(
     onDismiss: () -> Unit,
@@ -210,6 +242,7 @@ private fun CancelAndAddButtons(
         }
     }
 }
+
 @Composable
 private fun CancelAndSaveButtons(
     onDismiss: () -> Unit,
@@ -229,7 +262,7 @@ private fun CancelAndSaveButtons(
         }
         TextButton(
             onClick = {
-               onSaveUpdates()
+                onSaveUpdates()
             },
             colors = ButtonDefaults.buttonColors(
                 contentColor = colorResource(R.color.jet),
@@ -242,7 +275,7 @@ private fun CancelAndSaveButtons(
 }
 
 @Composable
- fun MissingFieldDialog(message: String, onDismiss: () -> Unit) {
+fun MissingFieldDialog(message: String, onDismiss: () -> Unit) {
     AlertDialog(onDismissRequest = { onDismiss() },
         title = { Text(stringResource(R.string.missing_field_alert)) },
         text = { Text(text = message) },
@@ -326,16 +359,22 @@ fun TaskForm(
     val sourcePath = remember { mutableStateOf(src) }
     val destPath = remember { mutableStateOf(dest) }
 
-    val isRoot:(String?)->Boolean = { path-> if(path == null ) false else Uri.parse(path).lastPathSegment.equals("primary:") }
+    val isRoot: (String?) -> Boolean =
+        { path -> if (path == null) false else Uri.parse(path).lastPathSegment.equals("primary:") }
 
     val sourceDirectoryPickerLauncher = pickDirectory({ sourcePath.value = it })
     val destinationDirectoryPickerLauncher = pickDirectory({ destPath.value = it })
 
-    val formattedSource = if (isRoot(sourcePath.value)) "Primary Root" else Utility.formatUriToUIString(sourcePath.value ?: stringResource(R.string.no_folder_selected))
-    val formattedDestination = if (isRoot(destPath.value)) "Primary Root" else Utility.formatUriToUIString(destPath.value ?: stringResource(R.string.no_folder_selected))
+    val formattedSource =
+        if (isRoot(sourcePath.value)) "Primary Root" else Utility.formatUriToUIString(
+            sourcePath.value ?: stringResource(R.string.no_folder_selected)
+        )
+    val formattedDestination =
+        if (isRoot(destPath.value)) "Primary Root" else Utility.formatUriToUIString(
+            destPath.value ?: stringResource(R.string.no_folder_selected)
+        )
 
     val typeTextState = remember { mutableStateOf(TextFieldValue(taskToBeEdited?.extension ?: "")) }
-
 
 
     val typeText = typeTextState.value.text
@@ -375,7 +414,11 @@ fun TaskForm(
         FolderPickerButton(
             text = stringResource(R.string.source),
             path = formattedSource.ifBlank { stringResource(R.string.no_folder_selected) },
-            onPick = { sourceDirectoryPickerLauncher.launch( sourcePath.value?.toUri() ?:  src?.toUri() ?:"".toUri()) }
+            onPick = {
+                sourceDirectoryPickerLauncher.launch(
+                    sourcePath.value?.toUri() ?: src?.toUri() ?: "".toUri()
+                )
+            }
         )
         // SWAP BUTTON
         SwapPathsButton(
@@ -395,7 +438,9 @@ fun TaskForm(
             text = stringResource(R.string.destination),
             path = formattedDestination.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
-                destinationDirectoryPickerLauncher.launch(destPath.value?.toUri() ?: dest?.toUri() ?:  "".toUri())
+                destinationDirectoryPickerLauncher.launch(
+                    destPath.value?.toUri() ?: dest?.toUri() ?: "".toUri()
+                )
             })
 
         sourcePath.value?.let { onSourceUriChange(it) }

@@ -28,6 +28,7 @@ import com.example.fileorganizer.Utility.emptyInteractionSource
 import com.example.fileorganizer.model.EmptyContentException
 import com.example.fileorganizer.model.MainState
 import com.example.fileorganizer.model.NoFileFoundException
+import com.example.fileorganizer.model.UITaskRecord
 import com.example.fileorganizer.ui.components.NotificationDialog
 import com.example.fileorganizer.ui.components.LoadingScreen
 import com.example.fileorganizer.ui.viewmodel.MainViewModel
@@ -145,8 +146,8 @@ fun MainScreen(viewModel: MainViewModel) {
                                     MissingFieldDialog(message = "Please, verify all inputs are filled",
                                         onDismiss = {
                                             showMissingFieldError = false
-                                            if (itemToEdit != null) isEditDialogOpen.value = true
-                                            if (itemToAdd != null) {
+                                            if (itemToEdit?.id != UITaskRecord.EMPTY_OBJECT.id) isEditDialogOpen.value = true
+                                            if (itemToAdd.id != UITaskRecord.EMPTY_OBJECT.id) {
                                                 isAddDialogOpen.value = true
                                             }
                                         })
@@ -155,11 +156,9 @@ fun MainScreen(viewModel: MainViewModel) {
 
                         }
 
-
                     }
                     AnimatedVisibility(isAddDialogOpen.value) {
                         AddTaskDialog(onAddItem = { extension, src, dest ->
-                            isAddDialogOpen.value = false
                             viewModel.addNewItemWith(extension, src, dest)
                         },
                             onSaveUpdates = {
