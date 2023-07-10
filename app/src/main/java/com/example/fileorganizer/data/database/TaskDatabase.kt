@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.fileorganizer.TaskRecord
 
-@Database(entities = [TaskRecord::class], version = 1, exportSchema = false)
+@Database(entities = [TaskRecord::class], version = 3, exportSchema = false)
 //@TypeConverters(UriConverter::class)
 
 abstract class TaskDatabase : RoomDatabase() {

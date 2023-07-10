@@ -82,11 +82,12 @@ dependencies {
     // Integration with ViewModels
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.6.0'
     // Integration with observables
-    implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
+//    implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
     // UI Tests
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
     //accompanist
     implementation("com.google.accompanist:accompanist-permissions:0.29.2-rc")
+    implementation("androidx.documentfile:documentfile:1.0.1")
 
 
 

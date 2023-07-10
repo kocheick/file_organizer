@@ -179,30 +179,30 @@ class FileMover(private val context: Context) {
 
     suspend fun moveFiles(sourcePath: String, destinationPath: String, extension: String) {
 
-        val source = Uri.parse(sourcePath)
+        val source = Uri.parse((sourcePath))
         val destination = Uri.parse(destinationPath)
-        val sourceFolder = DocumentFile.fromTreeUri(context, source)
-        val destFolder = DocumentFile.fromTreeUri(context, destination)
+        val sourceFolder = DocumentFile.fromTreeUri(context, source) ?: DocumentFile.fromSingleUri(context, source)
+        val destFolder = DocumentFile.fromTreeUri(context, destination) ?: DocumentFile.fromSingleUri(context, destination)
 
-        if (sourceFolder == null || !sourceFolder.exists()) {
-            throw Exception("Source file does not exist or is not accessible.")
+        if (sourceFolder == null || !sourceFolder.exists() || !sourceFolder.isDirectory) {
+            throw Exception("Source folder does not exist or is not accessible. ${sourceFolder?.uri}")
 
         }
 
         if (destFolder == null || !destFolder.exists() || !destFolder.isDirectory) {
             throw Exception("Destination folder does not exist or is not accessible.")
         }
-        withContext(Dispatchers.IO) { // Open an InputStream to read the content of the original file
+        // Open an InputStream to read the content of the original file
 
             val contentResolver = context.contentResolver
             var counter = 0
             sourceFolder.listFiles().forEach { sourceFile ->
-
+println("file #$counter ${sourceFile.uri}")
                 sourceFile?.let { file ->
                     if (file.name?.endsWith(extension) == true) {
                         counter++
 
-                        println("found ${file} !")
+                        println("found ${file.uri} !")
                         val newFile = destFolder.createFile(file.type ?: "*/*", file.name!!)
                             ?: throw Exception("Failed to copy file in the destination file.")
 
@@ -221,8 +221,8 @@ class FileMover(private val context: Context) {
                 }
             }
 
-            if (counter == 0)  {throw NoFileFoundException("No file with extension $extension to be found.")}
-        }
+            if (counter == 0)  {throw NoFileFoundException("No file found with $extension extension.")}
+
 
     }
 }
