@@ -1,11 +1,22 @@
 package com.example.fileorganizer
 
+import android.Manifest
+import android.Manifest.permission.MANAGE_EXTERNAL_STORAGE
+import android.app.Activity
+import android.app.Activity.RESULT_OK
 import android.content.Context
+import android.content.Intent
+import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.provider.DocumentsContract
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,17 +40,15 @@ import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DoubleArrow
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,59 +56,76 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.app.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.example.fileorganizer.model.UITaskRecord
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionStatus
+import com.google.accompanist.permissions.rememberPermissionState
 
 
 @Composable
 fun AddTaskDialog(
     item: UITaskRecord,
     onAddItem: (String, String, String) -> Unit,
-    onFieldsLeftBlank: () -> Unit,
     onDismiss: () -> Unit,
-    onSaveUpdates: (UITaskRecord) -> Unit
+    onSaveUpdates: (UITaskRecord?) -> Unit
 ) {
 
 
-    var extension by remember { mutableStateOf(item.extension) }
+    var extension = item.extension
 
     var source = item.source
 
     var destination = item.destination
-    var shouldBeEmpty by remember { mutableStateOf(false) }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            if (shouldBeEmpty) onSaveUpdates(UITaskRecord.EMPTY_OBJECT)
-          else onSaveUpdates(
+    AlertDialog(
+        modifier = Modifier
+            .wrapContentSize()
+            .background(colorResource(id = R.color.fiery_rose)),
+        onDismissRequest = {
+            onDismiss()
+            onSaveUpdates(
                 item.copy(
                     extension = extension, source = source, destination
                     = destination, id = item.id
-                )  )
-
-        }
-    }
-
-    AlertDialog(onDismissRequest = {
-        onDismiss()
-        onSaveUpdates(
-            item.copy(
-                extension = extension, source = source, destination
-                = destination, id = item.id
+                )
             )
-        )
-    },
-        title = { Text(stringResource(R.string.add_new_item)) },
+        },
+        title = { Text(stringResource(R.string.add_new_item).uppercase()) },
         //alert dialog content/body goes in here
         text = {
             TaskForm(
                 taskToBeEdited = item,
-                onDestinationUriChange = { destination = it },
+                onDestinationUriChange = {
+                    destination = it
+                    onSaveUpdates(
+                        item.copy(
+                            extension = extension, source = source, destination
+                            = it, id = item.id
+                        )
+                    )
+                },
                 onSourceUriChange = {
                     source = it
+                    onSaveUpdates(
+                        item.copy(
+                            extension = extension, source = it, destination
+                            = destination, id = item.id
+                        )
+                    )
                 },
-                onTypeChange = { extension = it },
+                onTypeChange = {
+                    extension = it
+                    onSaveUpdates(
+                        item.copy(
+                            extension = it, source = source, destination
+                            = destination, id = item.id
+                        )
+                    )
+                },
                 extensionLabelText =
                 stringResource(
                     id = R.string.enter_file_extension_or_type_with,
@@ -111,22 +137,12 @@ fun AddTaskDialog(
         buttons = {
             CancelAndAddButtons(
                 onDismiss = {
-                    shouldBeEmpty = true
+                    onSaveUpdates(null)
                     onDismiss()
                 },
                 onAddClick = {
-                    if (extension.isEmpty() or source.isEmpty() or destination.isEmpty()) {
-                        onFieldsLeftBlank()
-                        onSaveUpdates(
-                            item.copy(
-                                extension = extension, source = source, destination
-                                = destination, id = item.id
-                            )
-                        )
-                    } else {
-                        onAddItem(extension, source, destination)
-                        onDismiss()
-                    }
+                    onAddItem(extension, source, destination)
+
 
                 }
             )
@@ -139,43 +155,54 @@ fun AddTaskDialog(
 fun EditTaskDialog(
     itemToBeEdited: UITaskRecord,
     onUpdateItem: (UITaskRecord) -> Unit,
-    onSaveUpdates: (UITaskRecord) -> Unit,
-    onFieldsLeftBlank: (UITaskRecord) -> Unit,
+    onSaveUpdates: (UITaskRecord?) -> Unit,
     onDismiss: () -> Unit
 ) {
 
-    var extension by remember { mutableStateOf(itemToBeEdited.extension) }
+    var extension = itemToBeEdited.extension
     var source = itemToBeEdited.extension
     var destination = itemToBeEdited.extension
 
-    var shouldBeEmpty by remember { mutableStateOf(false) }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            if (shouldBeEmpty) onSaveUpdates(UITaskRecord.EMPTY_OBJECT)
-            else onSaveUpdates(
-                itemToBeEdited.copy(
-                    extension = extension, source = source, destination
-                    = destination, id = itemToBeEdited.id
-                )  )
-
-        }
-    }
-    AlertDialog(onDismissRequest = { onDismiss() },
-        title = { Text("Edit item") },
+    AlertDialog(onDismissRequest = {
+        onDismiss()
+    },
+        title = { Text("Edit item".uppercase()) },
         //alert dialog content/body goes in here
         text = {
             TaskForm(
                 onSourceUriChange = {
                     source = it
-
+                    onSaveUpdates(
+                        itemToBeEdited.copy(
+                            extension = extension, source = source,
+                            destination
+                            = destination,
+                        )
+                    )
 
                 },
                 onDestinationUriChange = {
                     destination = it
+                    onSaveUpdates(
+                        itemToBeEdited.copy(
+                            extension = extension, source = source,
+                            destination
+                            = destination,
+                        )
+                    )
                 },
                 taskToBeEdited = itemToBeEdited,
-                onTypeChange = { extension = it },
+                onTypeChange = {
+                    extension = it
+                    onSaveUpdates(
+                        itemToBeEdited.copy(
+                            extension = extension, source = source,
+                            destination
+                            = destination,
+                        )
+                    )
+                },
                 extensionLabelText = stringResource(
                     id = R.string.update_file_extension_or_type_current_is,
                     itemToBeEdited.extension.uppercase()
@@ -183,29 +210,18 @@ fun EditTaskDialog(
             )
         },
         buttons = {
-            CancelAndSaveButtons(onDismiss={
-                shouldBeEmpty = true
+            CancelAndSaveButtons(onDismiss = {
                 onDismiss()
             },
                 onSaveUpdates = {
-                    if (extension.isEmpty() or source.isEmpty() or destination.isEmpty()) {
-                        onFieldsLeftBlank(
-                            itemToBeEdited.copy(
-                                extension = extension,
-                                source = source,
-                                destination = destination
-                            )
+                    onUpdateItem(
+                        itemToBeEdited.copy(
+                            extension = extension,
+                            source = source,
+                            destination = destination
                         )
-                    } else {
-                        onUpdateItem(
-                            itemToBeEdited.copy(
-                                extension = extension,
-                                source = source,
-                                destination = destination
-                            )
-                        )
-                        onDismiss()
-                    }
+                    )
+
                 })
         }
     )
@@ -217,13 +233,17 @@ private fun CancelAndAddButtons(
     onDismiss: () -> Unit,
     onAddClick: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(2.dp), horizontalArrangement = Arrangement.End
+    ) {
         TextButton(
             onClick = {
                 onDismiss()
             },
             colors = ButtonDefaults.buttonColors(
-                contentColor = colorResource(R.color.fiery_rose),
+                contentColor = colorResource(R.color.jet),
                 backgroundColor = Color.LightGray.copy(0.0f)
             )
         ) {
@@ -234,7 +254,7 @@ private fun CancelAndAddButtons(
                 onAddClick()
             },
             colors = ButtonDefaults.buttonColors(
-                contentColor = colorResource(R.color.jet),
+                contentColor = colorResource(R.color.fiery_rose),
                 backgroundColor = Color.LightGray.copy(0.0f)
             )
         ) {
@@ -248,13 +268,17 @@ private fun CancelAndSaveButtons(
     onDismiss: () -> Unit,
     onSaveUpdates: () -> Unit
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(2.dp), horizontalArrangement = Arrangement.End
+    ) {
         TextButton(
             onClick = {
                 onDismiss()
             },
             colors = ButtonDefaults.buttonColors(
-                contentColor = colorResource(R.color.fiery_rose),
+                contentColor = colorResource(R.color.jet),
                 backgroundColor = Color.LightGray.copy(0.0f)
             )
         ) {
@@ -265,7 +289,7 @@ private fun CancelAndSaveButtons(
                 onSaveUpdates()
             },
             colors = ButtonDefaults.buttonColors(
-                contentColor = colorResource(R.color.jet),
+                contentColor = colorResource(R.color.fiery_rose),
                 backgroundColor = Color.LightGray.copy(0.0f)
             )
         ) {
@@ -277,7 +301,7 @@ private fun CancelAndSaveButtons(
 @Composable
 fun MissingFieldDialog(message: String, onDismiss: () -> Unit) {
     AlertDialog(onDismissRequest = { onDismiss() },
-        title = { Text(stringResource(R.string.missing_field_alert)) },
+        title = { Text(stringResource(R.string.missing_field)) },
         text = { Text(text = message) },
         buttons = {
             Row(
@@ -346,6 +370,39 @@ fun RemovalDialog(item: UITaskRecord, onConfirm: () -> Unit, onDismiss: () -> Un
 }
 
 @Composable
+fun DirectoryPicker(show: Boolean, onDirectorySelected: (String?) -> Unit) {
+    val launcher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) { result ->
+
+            if (result.resultCode == RESULT_OK) {
+                val intent: Intent? = result.data
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    intent.addCategory(Intent.CATEGORY_OPENABLE)
+                }
+                val uri = intent?.data
+
+                uri?.let {
+
+                    println("your URI path: ${it.path}")
+                    println("your URI encoded path: ${it.encodedPath}")
+                    println("your URI path fragments: ${it.pathSegments}")
+                    println("your URI scheme: ${it.scheme}")
+                    println("your URI authority: ${it.authority}")
+                    println("your URI encoded authority: ${it.encodedAuthority}")
+                    println("your URI full: ${Uri.decode(it.toString())}")
+                    println("decode: ${Uri.decode(it.toString())}")
+                    println("tostring : ${(it.toString())}")
+                    onDirectorySelected(Uri.decode(it.toString()))
+                }
+            }
+        }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
 fun TaskForm(
     taskToBeEdited: UITaskRecord? = null,
     onSourceUriChange: (String) -> Unit,
@@ -361,23 +418,30 @@ fun TaskForm(
 
     val isRoot: (String?) -> Boolean =
         { path -> if (path == null) false else Uri.parse(path).lastPathSegment.equals("primary:") }
+    val context = LocalContext.current
+    val permission = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) MANAGE_EXTERNAL_STORAGE else Manifest.permission.WRITE_EXTERNAL_STORAGE
+    }
+val permissioState = rememberPermissionState(permission = permission )
 
-    val sourceDirectoryPickerLauncher = pickDirectory({ sourcePath.value = it })
-    val destinationDirectoryPickerLauncher = pickDirectory({ destPath.value = it })
+
+    val sourceDirectoryPickerLauncher = pickDirectory(context = context.getActivity()?: return, pickedUri = {
+        sourcePath.value = it
+    })
+    val destinationDirectoryPickerLauncher = pickDirectory(context = context.getActivity() ?: return,pickedUri = {
+        destPath.value = it
+    })
 
     val formattedSource =
         if (isRoot(sourcePath.value)) "Primary Root" else Utility.formatUriToUIString(
-            sourcePath.value ?: stringResource(R.string.no_folder_selected)
+            Uri.decode(sourcePath.value) ?: stringResource(R.string.no_folder_selected)
         )
     val formattedDestination =
         if (isRoot(destPath.value)) "Primary Root" else Utility.formatUriToUIString(
-            destPath.value ?: stringResource(R.string.no_folder_selected)
+            Uri.decode(destPath.value )?: stringResource(R.string.no_folder_selected)
         )
 
     val typeTextState = remember { mutableStateOf(TextFieldValue(taskToBeEdited?.extension ?: "")) }
-
-
-    val typeText = typeTextState.value.text
 
 
 
@@ -399,7 +463,10 @@ fun TaskForm(
             singleLine = true, maxLines = 1,
             label = { Text(stringResource(R.string.enter_file_type)) },
             value = typeTextState.value,
-            onValueChange = { typeTextState.value = it }, modifier = Modifier
+            onValueChange = {
+                typeTextState.value = it
+                onTypeChange(it.text)
+            }, modifier = Modifier
                 .padding(bottom = 16.dp)
                 .width(180.dp)
         )
@@ -415,10 +482,23 @@ fun TaskForm(
             text = stringResource(R.string.source),
             path = formattedSource.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
-                sourceDirectoryPickerLauncher.launch(
-                    sourcePath.value?.toUri() ?: src?.toUri() ?: "".toUri()
-                )
+                when(permissioState.status){
+                    is PermissionStatus.Granted -> {
+                        println("GRANTED")
+
+                        sourceDirectoryPickerLauncher.launch(sourcePath.value?.toUri()
+                        )
+                    }
+                    is PermissionStatus.Denied ->{
+                        println("DENIED")
+                        permissioState.launchPermissionRequest()
+                    }
+                }
+
+//                checkAndRequestFileStoragePermission(context,android.Manifest.permission.MANAGE_DOCUMENTS,sourceDirectoryPickerLauncher)
+//                checkAndRequestFileStoragePermission(context.getActivity()!!,Manifest.permission.WRITE_EXTERNAL_STORAGE,sourceDirectoryPickerLauncher)
             }
+
         )
         // SWAP BUTTON
         SwapPathsButton(
@@ -438,14 +518,20 @@ fun TaskForm(
             text = stringResource(R.string.destination),
             path = formattedDestination.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
-                destinationDirectoryPickerLauncher.launch(
-                    destPath.value?.toUri() ?: dest?.toUri() ?: "".toUri()
-                )
+//                destinationDirectoryPickerLauncher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
+//                checkAndRequestFileStoragePermission(context.getActivity()!!,Manifest.permission.WRITE_EXTERNAL_STORAGE,destinationDirectoryPickerLauncher)
+                when(permissioState.status){
+                    is PermissionStatus.Granted -> {
+                        destinationDirectoryPickerLauncher.launch(destPath.value?.toUri())
+                    }
+                    is PermissionStatus.Denied ->{
+                        permissioState.launchPermissionRequest()
+                    }
+                }
             })
 
         sourcePath.value?.let { onSourceUriChange(it) }
         destPath.value?.let { onDestinationUriChange(it) }
-        onTypeChange(typeText)
 
         println("your task ${taskToBeEdited}")
 //        val task = taskToBeEdited?.copy(
@@ -543,38 +629,87 @@ private fun swipePath(
 }
 
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun pickDirectory(pickedUri: (String) -> Unit): ManagedActivityResultLauncher<Uri?, Uri?> {
+fun pickDirectory(context: Activity, pickedUri: (String) -> Unit): ManagedActivityResultLauncher<Uri?, Uri?> {
 
-    val result =
-        rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocumentTree()) { uri ->
-            uri?.let {
-                println("your URI path: ${it.path}")
-                println("your URI encoded path: ${it.encodedPath}")
-                println("your URI path fragments: ${it.pathSegments}")
-                println("your URI scheme: ${it.scheme}")
-                println("your URI authority: ${it.authority}")
-                println("your URI encoded authority: ${it.encodedAuthority}")
-                println("your URI full: ${Uri.decode(it.toString())}")
-                println(Uri.decode(it.toString()))
-                pickedUri(Uri.decode(it.toString()))
-            }
+
+
+    val launcher =
+        rememberLauncherForActivityResult(contract = Utility.OpenDirectoryTree()) { result ->
+
+//                    intent.data= Uri.parse(initialDirectory)
+//                    intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+//                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+//                    intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+//                    intent.addCategory(Intent.CATEGORY_OPENABLE)
+                    result?.let {
+                        val takeFlags = Intent.FLAG_GRANT_WRITE_URI_PERMISSION or FLAG_GRANT_READ_URI_PERMISSION
+
+                        println("your URI path: ${it.path}")
+                        println("your URI encoded path: ${it.encodedPath}")
+                        println("your URI path fragments: ${it.pathSegments}")
+                        println("your URI scheme: ${it.scheme}")
+                        println("your URI authority: ${it.authority}")
+                        println("your URI encoded authority: ${it.encodedAuthority}")
+                        println("your URI full: ${Uri.decode(it.toString())}")
+                        println("decode: ${Uri.decode(it.toString())}")
+                        println("tostring : ${(it.toString())}")
+                        context.getActivity()?.contentResolver?.takePersistableUriPermission(it, takeFlags)
+                        context.getActivity()?.grantUriPermission(context.packageName,it, takeFlags)
+                        pickedUri((it.toString()))
+
+                    }
+
         }
-    return result
+
+//    val permissionState = rememberPermissionState(permission = Manifest.permission.MANAGE_EXTERNAL_STORAGE){
+//            isGranted ->
+//        if (isGranted) {
+//        } else {
+//
+//        }
+//    }
+
+    return launcher
 }
 
-
-fun checkAndRequestFileStoragePermission(
-    context: Context,
+@Composable
+fun CheckAndRequestFileStoragePermission(
     permission: String,
-    launcher: ManagedActivityResultLauncher<String, Boolean>
+    launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
+) {
+    val context = LocalContext.current
+
+
+    val permissionGranted = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            launcher.launch(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+            })
+        }
+    }
+
+    val permissionCheck = { permission: String ->
+        ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    }
+
+    if (!permissionCheck(permission)) {
+        permissionGranted.launch(permission)
+    }
+}
+fun checkAndRequestFileStoragePermission(context: Activity,
+    permission: String,
+     launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
 ) {
     val permissionCheckResult = ContextCompat.checkSelfPermission(context, permission)
     if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
         // Permission already granted, launch directory picker
-        launcher.launch("*/*")
+        launcher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
     } else {
         // Permission not granted, request it
-        launcher.launch(permission)
+        ActivityCompat.requestPermissions(context, arrayOf(permission), 0)
     }
 }

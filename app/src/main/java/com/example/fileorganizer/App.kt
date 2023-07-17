@@ -41,7 +41,9 @@ class App : Application() {
         super.onCreate()
         instance = this
 
-        fileMover = FileMover(this)
+        fileMover = FileMover().apply {
+            initService(this@App)
+        }
 
         database = TaskDatabase.getInstance(instance)
 

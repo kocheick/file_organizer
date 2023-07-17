@@ -26,7 +26,7 @@ data class TaskRecord(
 //        val sourceFolder = formatUriToUIString(source)
 //        val destinationFolder = formatUriToUIString(destination)
 
-        return UITaskRecord(fileType, source, destination,isActive, id)
+        return UITaskRecord(fileType, Uri.decode(source), Uri.decode(destination),isActive, id)
     }
 }
 

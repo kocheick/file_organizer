@@ -25,7 +25,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fileorganizer.Utility.formatUriToUIString
@@ -176,7 +175,7 @@ private fun FolderPath(source: String, path: String) {
 @Composable
 fun TaskListContent(
     tasksList: List<UITaskRecord>,
-    onEditItmClicked: (UITaskRecord) -> Unit,
+    onItemClick: (UITaskRecord) -> Unit,
     onRemoveItem: (UITaskRecord) -> Unit,
     onToggleState: (UITaskRecord) -> Unit
 ) {
@@ -193,7 +192,7 @@ fun TaskListContent(
 
             TaskItem(
                 task = task,
-                onClick = { onEditItmClicked(task) },
+                onClick = { onItemClick(task) },
                 onRemoveClick = { onRemoveItem(task) },
                 onToggleState = { onToggleState(task) }
             )

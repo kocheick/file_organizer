@@ -1,8 +1,15 @@
 package com.example.fileorganizer
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.DocumentsContract
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.remember
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
@@ -28,6 +35,26 @@ object Utility {
                return false
           }
 
+     }
+
+     class OpenDirectoryTree():ActivityResultContracts.OpenDocumentTree(){
+          override fun createIntent(context: Context, input: Uri?): Intent {
+               super.createIntent(context, input)
+
+               val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                              addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                              addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                              addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    println("Utility-> flags granted")
+               }
+               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && input != null) {
+                    intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, input)
+
+               }
+
+
+               return intent
+          }
      }
 
 

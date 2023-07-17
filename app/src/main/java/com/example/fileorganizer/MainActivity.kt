@@ -1,5 +1,7 @@
 package com.example.fileorganizer
 
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -24,3 +26,10 @@ class MainActivity : AppCompatActivity() {
     }
 
 }
+
+fun Context.getActivity():AppCompatActivity? = when(this){
+    is AppCompatActivity -> this
+    is ContextWrapper -> baseContext.getActivity()
+    else -> null
+}
+

@@ -1,13 +1,16 @@
 package com.example.fileorganizer.ui.viewmodel
 
+import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.core.net.toUri
 import androidx.lifecycle.*
 import com.example.fileorganizer.TaskRecord
 import com.example.fileorganizer.TaskRecord.Companion.EMPTY_ITEM
 import com.example.fileorganizer.data.repository.Repository
 import com.example.fileorganizer.model.EmptyContentException
-import com.example.fileorganizer.model.MainState
+import com.example.fileorganizer.model.UiState
+import com.example.fileorganizer.model.MissingFieldException
 import com.example.fileorganizer.model.UITaskRecord
 import com.example.fileorganizer.service.FileMover
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -28,7 +31,7 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
     private val DELAY_TIME: Long = 2800
     private var _tasks: MutableList<TaskRecord> = mutableListOf()
 
-    private val _state: MutableStateFlow<MainState> = MutableStateFlow(MainState.Loading)
+    private val _state: MutableStateFlow<UiState> = MutableStateFlow(UiState.Loading)
     val mainState = _state.asStateFlow()
 
 //    private val _hasError: MutableStateFlow<Boolean> = MutableStateFlow(false)
@@ -39,8 +42,8 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
 
     val coroutineExceptionHandler = CoroutineExceptionHandler { _, exception ->
 //        _hasError.value = true
-       _state.value = MainState.Data(_tasks.map { it.toUITaskRecord() },exception )
-
+       _state.value = UiState.Data(_tasks.map { it.toUITaskRecord() },exception )
+println(exception.message)
     }
 
 
@@ -48,8 +51,15 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
     val itemToEdit = _itemToEdit.asStateFlow()
     private var _itemToRemove: MutableStateFlow<UITaskRecord?> = MutableStateFlow(null)
     val itemToRemove = _itemToRemove.asStateFlow()
-    private var _itemToAdd: MutableStateFlow<UITaskRecord> = MutableStateFlow(UITaskRecord.EMPTY_OBJECT)
+    private var _itemToAdd: MutableStateFlow<UITaskRecord?> = MutableStateFlow(null)
     val itemToAdd = _itemToAdd.asStateFlow()
+
+    private var _isAddDialogpOpen: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isAddDialogpOpen = _isAddDialogpOpen.asStateFlow()
+
+    private var _isEditDialogpOpen: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isEditDialogpOpen = _isEditDialogpOpen
+        .asStateFlow()
 
     init {
         wtihBlankSamples()
@@ -65,9 +75,14 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
 //        }
     }
 
+    fun openAddDialog(){ _isAddDialogpOpen.update { true }}
+    fun closeAddDialog(){ _isAddDialogpOpen.update { false }}
+    fun openEditDialog(){ _isEditDialogpOpen.update { true }}
+    fun closeEditDialog(){ _isEditDialogpOpen.update { false }}
+
     fun dismissError() {
         _state.update {
-            (it as MainState.Data).copy(exception = null)
+            (it as UiState.Data).copy(exception = null)
         }
 //        _hasError.value = false
 //        _errorMessage.value = ""
@@ -75,11 +90,11 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
     }
 
     fun onUpdateItemToEdit(item: UITaskRecord?) {
-        _itemToEdit.update { item }
+        _itemToEdit.value = item
     }
 
-    fun onUpdateItemToAdd(item: UITaskRecord) {
-        _itemToAdd.update { item }
+    fun onUpdateItemToAdd(item: UITaskRecord?) {
+        _itemToAdd.value = item
     }
 
     fun onUpdateItemToRemove(item: UITaskRecord?) {
@@ -87,7 +102,7 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
     }
 
     private fun initTasks() {
-        _state.value = MainState.Loading
+        _state.value = UiState.Loading
         viewModelScope.launch(Dispatchers.Unconfined + coroutineExceptionHandler) {
             //  for (i in  samples) addTask(i)
             delay(DELAY_TIME)
@@ -99,7 +114,7 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
                 SharingStarted.WhileSubscribed(), mutableListOf()
             ).collect { t ->
                     _tasks = t as MutableList<TaskRecord>
-                    _state.value = MainState.Data(t.map { it.toUITaskRecord() })
+                    _state.value = UiState.Data(t.map { it.toUITaskRecord() })
 
             }
 
@@ -119,15 +134,25 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
 
     fun addNewItemWith(extension: String, source: String, destination: String) {
         viewModelScope.launch(IO + coroutineExceptionHandler) {
-            repository.addTask(
-                EMPTY_ITEM.copy(
-                    extension = extension,
-                    source = source,
-                    destination = destination,
-                    isActive = true
-                )
-            )
-            _itemToAdd.update { UITaskRecord.EMPTY_OBJECT }
+           if (extension.isEmpty() or source.isEmpty() or destination.isEmpty()) {
+               closeEditDialog()
+               openAddDialog()
+               throw MissingFieldException("Please, verify all inputs are filled.")
+           }
+            else {
+
+               closeAddDialog()
+               repository.addTask(
+                   EMPTY_ITEM.copy(
+                       extension = extension,
+                       source = source,
+                       destination = destination,
+                       isActive = true
+                   )
+               )
+            _itemToAdd.update { null }
+
+           }
         }
     }
 
@@ -136,8 +161,15 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
         viewModelScope.launch(IO + coroutineExceptionHandler) {
             val old = getTaskById(itemToBeUpdated.id)
             println("updating item ${itemToBeUpdated.id} from  $old to ${itemToBeUpdated}")
-
-            repository.updateTask(itemToBeUpdated.toTaskRecord())
+            if (itemToBeUpdated.extension.isEmpty() or itemToBeUpdated.source.isEmpty() or itemToBeUpdated.destination.isEmpty()) {
+                closeAddDialog()
+                openEditDialog()
+                throw MissingFieldException("Please, verify all inputs are filled.")
+            }
+            else {
+                closeEditDialog()
+                repository.updateTask(itemToBeUpdated.toTaskRecord())
+            }
 
         }
 
@@ -154,7 +186,7 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
 
     @RequiresApi(Build.VERSION_CODES.R)
     fun processTasks() {
-            _state.value = MainState.Loading
+            _state.value = UiState.Loading
 
             viewModelScope.launch(IO + coroutineExceptionHandler) {
                 val items = _tasks.filter { it.isActive }
@@ -163,11 +195,16 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
 
                 items.forEach { task ->
 
-                    fileMover.moveFiles(
-                        task.source,
-                        task.destination,
+                    fileMover.moveFilesWithExtension(
+                        Uri.parse(task.source),
+                        task.destination.toUri(),
                         task.extension.lowercase().trim()
                     )
+//                    fileMover.moveFiles(
+//                        task.source,
+//                        task.destination,
+//                        task.extension.lowercase().trim()
+//                    )
 //                    val sourceFiles =
 //                        withContext(Dispatchers.IO) { (fileMover.getFiles(task.from, task.type)) }
 //                    println(sourceFiles)
@@ -178,7 +215,7 @@ class MainViewModel(private val repository: Repository, private val fileMover: F
 //                        }
 //                    }
                 }
-                    _state.value = MainState.Data(_tasks.map { it.toUITaskRecord() },null )
+                    _state.value = UiState.Data(_tasks.map { it.toUITaskRecord() },null )
 
                 }else throw EmptyContentException("No item to be processed.")
         }

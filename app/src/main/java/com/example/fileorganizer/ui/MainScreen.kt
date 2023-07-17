@@ -26,7 +26,8 @@ import com.example.fileorganizer.*
 import com.example.fileorganizer.R
 import com.example.fileorganizer.Utility.emptyInteractionSource
 import com.example.fileorganizer.model.EmptyContentException
-import com.example.fileorganizer.model.MainState
+import com.example.fileorganizer.model.UiState
+import com.example.fileorganizer.model.MissingFieldException
 import com.example.fileorganizer.model.NoFileFoundException
 import com.example.fileorganizer.model.UITaskRecord
 import com.example.fileorganizer.ui.components.NotificationDialog
@@ -38,12 +39,12 @@ import com.example.fileorganizer.ui.viewmodel.MainViewModel
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
 
-    val mainState: MainState by viewModel.mainState.collectAsState()
+    val mainState: UiState by viewModel.mainState.collectAsState()
     val itemCount =
-        remember(mainState) { if (mainState is MainState.Data) (mainState as MainState.Data).records.size else 0 }
+        remember(mainState) { if (mainState is UiState.Data) (mainState as UiState.Data).records.size else 0 }
 
-    val isAddDialogOpen = rememberSaveable { mutableStateOf(false) }
-    var showMissingFieldError by remember { mutableStateOf(false) }
+    val isAddDialogOpen by viewModel.isAddDialogpOpen.collectAsState()
+    val isEditDialogOpen by viewModel.isEditDialogpOpen.collectAsState()
 
 
 //    var itemToEdit: UITaskRecord? by remember { mutableStateOf(null) }
@@ -59,7 +60,8 @@ fun MainScreen(viewModel: MainViewModel) {
             floatingActionButton = {
                 ActionButtons(itemCount = itemCount,
                     onAddNewTaskItem = {
-                        isAddDialogOpen.value = true
+                        viewModel.openAddDialog()
+                        if (itemToAdd == null )viewModel.onUpdateItemToAdd(UITaskRecord.EMPTY_OBJECT)
                     },
 
                     onExecuteTasksClicked = {
@@ -75,26 +77,26 @@ fun MainScreen(viewModel: MainViewModel) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
 
                     when (val currentState = mainState) {
-                        is MainState.Loading -> {
+                        is UiState.Loading -> {
                             LoadingScreen()
                         }
 
-                        is MainState.Data
+                        is UiState.Data
                         -> {
                             val items = currentState.records
 
-                            val isEditDialogOpen = rememberSaveable { mutableStateOf(false) }
-                            val isRemovalDialogOpen = rememberSaveable { mutableStateOf(false) }
 
                             if (items.isEmpty()) EmptyContentScreen()
                             else {
+                                val isRemovalDialogOpen = rememberSaveable { mutableStateOf(false) }
+
                                 TaskListContent(
                                     tasksList = items,
-                                    onEditItmClicked = { clickedTask ->
+                                    onItemClick = { clickedTask ->
 
                                         viewModel.onUpdateItemToEdit(clickedTask)
 
-                                        isEditDialogOpen.value = true
+                                       viewModel.openEditDialog()
                                     },
                                     onRemoveItem = { itemToBeRemoved ->
                                         viewModel.onUpdateItemToRemove(itemToBeRemoved)
@@ -106,21 +108,16 @@ fun MainScreen(viewModel: MainViewModel) {
 
 
 
-                                if ((isEditDialogOpen.value && itemToEdit != null)) AnimatedVisibility(
-                                    isEditDialogOpen.value
+                              AnimatedVisibility(
+                                    isEditDialogOpen && itemToEdit != null
                                 ) {
                                     EditTaskDialog(
                                         itemToBeEdited = itemToEdit ?: return@AnimatedVisibility,
                                         onUpdateItem = { viewModel.updateItem(it) },
                                         onSaveUpdates = {viewModel.onUpdateItemToEdit(it)},
-                                        onFieldsLeftBlank = {
-                                            viewModel.onUpdateItemToEdit(it)
-                                            isEditDialogOpen.value = false
-                                            showMissingFieldError = !showMissingFieldError
-
-                                        }, onDismiss = {
-                                            isEditDialogOpen.value = false
-                                            viewModel.onUpdateItemToEdit(null)
+                                       onDismiss = {
+                                            viewModel.closeEditDialog()
+//                                            viewModel.onUpdateItemToEdit(null)
                                         })
                                 }
 
@@ -141,42 +138,25 @@ fun MainScreen(viewModel: MainViewModel) {
                                         })
                                 }
 
-
-                                AnimatedVisibility(showMissingFieldError) {
-                                    MissingFieldDialog(message = "Please, verify all inputs are filled",
-                                        onDismiss = {
-                                            showMissingFieldError = false
-                                            if (itemToEdit?.id != UITaskRecord.EMPTY_OBJECT.id) isEditDialogOpen.value = true
-                                            if (itemToAdd.id != UITaskRecord.EMPTY_OBJECT.id) {
-                                                isAddDialogOpen.value = true
-                                            }
-                                        })
-                                }
                             }
 
                         }
 
                     }
-                    AnimatedVisibility(isAddDialogOpen.value) {
-                        AddTaskDialog(onAddItem = { extension, src, dest ->
-                            viewModel.addNewItemWith(extension, src, dest)
-                        },
-                            onSaveUpdates = {
-                                viewModel.onUpdateItemToAdd(it)
-                            },
+                    if (mainState is UiState.Data) AnimatedVisibility((mainState as UiState.Data).exception != null) {
+                        when (val exception = (mainState as UiState.Data).exception) {
 
-                            item = itemToAdd,
-                            onFieldsLeftBlank = {
-                                isAddDialogOpen.value = false
-                                showMissingFieldError = !showMissingFieldError
-                            }, onDismiss = {
-                                isAddDialogOpen.value = false
-                                // cpmment this line out will let user add new item from previous properties instead of blank/new item
-                            })
-                    }
+                            is MissingFieldException -> {
+                                NotificationDialog(title = stringResource(id = R.string.missing_field), message = exception.errorMessage ,
+                                    onDismiss = {
+//                                        if (itemToAdd != null && !isAddDialogOpen.value) isAddDialogOpen.value = true
+//                                        else if (itemToEdit != null && !isEditDialogOpen.value) isEditDialogOpen.value = true
 
-                    if (mainState is MainState.Data) AnimatedVisibility((mainState as MainState.Data).exception != null) {
-                        when (val exception = (mainState as MainState.Data).exception) {
+                                        viewModel.dismissError()
+
+                                    })
+                            }
+
                             is NoFileFoundException -> {
                                 NotificationDialog(title = "Result", message = exception.message
                                     ?: return@AnimatedVisibility, onDismiss = {
@@ -202,6 +182,24 @@ fun MainScreen(viewModel: MainViewModel) {
                         }
 
                     }
+
+                    AnimatedVisibility(isAddDialogOpen) {
+                        AddTaskDialog(onAddItem = { extension, src, dest ->
+                            viewModel.addNewItemWith(extension, src, dest)
+//                            viewModel.onUpdateItemToAdd(null)
+
+                        },
+                            onSaveUpdates = {
+                                    viewModel.onUpdateItemToAdd(it)
+                            },
+
+                            item = itemToAdd ?: return@AnimatedVisibility,
+                            onDismiss = {
+                                viewModel.closeAddDialog()
+                                // cpmment this line out will let user add new item from previous properties instead of blank/new item
+                            })
+                    }
+
 
                 }
 

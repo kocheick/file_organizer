@@ -1,19 +1,38 @@
 package com.example.fileorganizer.service
 
+import android.content.ContentProvider
+import android.content.ContentResolver
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
+import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+import android.database.Cursor
 import android.net.Uri
 import android.os.Build
+import android.provider.DocumentsContract
 import android.provider.MediaStore
+import android.provider.MediaStore.MediaColumns.DISPLAY_NAME
+import android.provider.MediaStore.MediaColumns.MIME_TYPE
+import android.provider.MediaStore.MediaColumns.RELATIVE_PATH
+import android.provider.MediaStore.MediaColumns.SIZE
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.documentfile.provider.DocumentFile
+import com.example.fileorganizer.getActivity
 import com.example.fileorganizer.model.NoFileFoundException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.*
 
-class FileMover(private val context: Context) {
+class FileMover() : ContentProvider() {
+    private lateinit var context: Context
+
+    fun initService(context: Context){
+        this.context = context
+    }
+
 
     fun getFilesWithExtension(uri: Uri, extension: String): List<File> {
         val contentResolver = context.contentResolver
@@ -177,15 +196,219 @@ class FileMover(private val context: Context) {
             files
         }
     }
+    suspend fun moveFilesByExtension(
+        sourceUri: String,
+        destinationUri: String,
+        extension: String,
+        contentResolver: ContentResolver = context.contentResolver,
+
+
+    ) {
+
+
+
+//        val takeFlags = Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        withContext(Dispatchers.IO) {
+            // Create the destination folder if it doesn't exist
+//
+//            contentResolver.takePersistableUriPermission(Uri.parse(destinationUri),takeFlags)
+//            contentResolver.takePersistableUriPermission(Uri.parse(sourceUri),takeFlags)
+
+            val destinationFolder = DocumentsContract.createDocument(
+                contentResolver,
+                DocumentsContract.buildDocumentUriUsingTree(Uri.parse(destinationUri), DocumentsContract.getTreeDocumentId(Uri.parse(destinationUri))!!),
+                DocumentsContract.Document.MIME_TYPE_DIR,
+                DocumentsContract.getTreeDocumentId(Uri.parse(destinationUri))
+            )
+
+
+
+            // Query the files with the specified extension from the source URI
+            val projection = arrayOf(
+                MediaStore.MediaColumns._ID,
+                DISPLAY_NAME,
+                SIZE,
+                MIME_TYPE,
+                RELATIVE_PATH
+            )
+            val selection = "$RELATIVE_PATH LIKE ? AND $MIME_TYPE LIKE ?"
+            val selectionArgs = arrayOf("%/$extension", "%/$extension")
+            val sortOrder = "$DISPLAY_NAME ASC"
+
+            val sourceFolderUri = DocumentsContract.buildDocumentUriUsingTree(Uri.parse(sourceUri), DocumentsContract.getTreeDocumentId(Uri.parse(sourceUri))!!)
+            val sourceFolderId = DocumentsContract.getTreeDocumentId(sourceFolderUri)
+
+            val queryUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            } else {
+                MediaStore.Files.getContentUri("external")
+            }
+
+            val queryCursor = contentResolver.query(
+                queryUri,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )
+
+            println("Found 1 ${queryCursor?.columnNames?.toList()}")
+
+
+            queryCursor?.use { cursor ->
+                val idColumnIndex = cursor.getColumnIndex(MediaStore.MediaColumns._ID)
+                val displayNameColumnIndex = cursor.getColumnIndex(DISPLAY_NAME)
+                val sizeColumnIndex = cursor.getColumnIndex(SIZE)
+                val mimeTypeColumnIndex = cursor.getColumnIndex(MIME_TYPE)
+                val relativePathColumnIndex = cursor.getColumnIndex(RELATIVE_PATH)
+
+                while (cursor.moveToNext()) {
+                    val fileId = cursor.getLong(idColumnIndex)
+                    val displayName = cursor.getString(displayNameColumnIndex)
+                    val size = cursor.getLong(sizeColumnIndex)
+                    val mimeType = cursor.getString(mimeTypeColumnIndex)
+                    val relativePath = cursor.getString(relativePathColumnIndex)
+                    println("Found 2 $displayName")
+
+                    // Copy the file to the destination folder
+                    val destinationFileUri = DocumentsContract.createDocument(
+                        contentResolver,
+                        destinationFolder!!,
+                        mimeType,
+                        displayName
+                    )
+
+
+                    contentResolver.openOutputStream(destinationFileUri!!, "w").use { output ->
+                        contentResolver.openInputStream(ContentUris.withAppendedId(queryUri, fileId)).use { input ->
+                            if (output != null) {
+                                input?.copyTo(output)
+                            }
+                        }
+                    }
+
+                    // Delete the original file
+                    val deleteUri = DocumentsContract.buildDocumentUriUsingTree(sourceFolderUri, "$sourceFolderId/$relativePath/$displayName")
+                    contentResolver.delete(deleteUri, null, null)
+                }
+            }
+        }
+    }
+    suspend fun moveFilesWithExtension(
+        sourceFolderUri: Uri,
+        destinationFolderUri: Uri,
+        extension: String
+    ) {
+        // Check if the source folder exists
+        val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        context.contentResolver.takePersistableUriPermission(sourceFolderUri, takeFlags)
+        context.grantUriPermission(context.packageName,sourceFolderUri, takeFlags)
+        val sourceFolder = DocumentFile.fromTreeUri(context, sourceFolderUri)
+        if (sourceFolder == null || !sourceFolder.exists() || !sourceFolder.isDirectory) {
+            println("Source folder does not exist.")
+            return
+        }
+
+        // Check if the destination folder exists
+        val destinationFolder = DocumentFile.fromTreeUri(context, destinationFolderUri)
+        if (destinationFolder == null || !destinationFolder.exists() || !destinationFolder.isDirectory) {
+            println("Destination folder does not exist.")
+            return
+        }
+        val contentResolver = context.contentResolver
+
+
+
+//        context.contentResolver.takePersistableUriPermission(Uri.parse(intent.dataString), takeFlags)
+//                    context.grantUriPermission(context.packageName,Uri.parse(intent.dataString), takeFlags)
+        // Define the columns to query
+        val projection = arrayOf(
+            MediaStore.MediaColumns._ID,
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.MIME_TYPE
+        )
+
+        // Define the selection criteria
+        val selection = "${MediaStore.MediaColumns.DATA} LIKE ?"
+        val selectionArgs = arrayOf("%.$extension")
+
+        // Query the source folder for files with the given extension
+        val queryUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        } else {
+            MediaStore.Files.getContentUri("external")
+        }
+        val cursor =contentResolver.query(
+            queryUri,
+            projection,
+            selection,
+            selectionArgs,
+            null
+        )
+
+        cursor?.use {
+            val idColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+            val nameColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+            val mimeTypeColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE)
+
+
+            println("PRINTING ")
+
+            while (cursor.moveToNext()) {
+                val fileId = cursor.getLong(idColumnIndex)
+                val fileName = cursor.getString(nameColumnIndex)
+                val mimeType = cursor.getString(mimeTypeColumnIndex)
+
+                println("PRINTING PRINTIN $fileId $fileName $")
+                val sourceFileUri = ContentUris.withAppendedId(queryUri, fileId)
+                context.getActivity()?.contentResolver?.takePersistableUriPermission(sourceFileUri.normalizeScheme(), takeFlags)
+                context.getActivity()?.grantUriPermission(context.packageName,sourceFileUri, takeFlags)
+
+                val sourceFile = DocumentFile.fromSingleUri(context, sourceFileUri)
+
+                if (sourceFile != null && sourceFile.isFile) {
+                    println("BEFORE COPYING ")
+
+                    val destinationFile = destinationFolder?.createFile(mimeType, fileName)
+                    if (destinationFile != null) {
+                        println("PRINTING COPYING ")
+
+                        contentResolver.openOutputStream(destinationFile.uri)?.use { outputStream ->
+                            contentResolver.openInputStream(sourceFile.uri)?.use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
+                        }
+                    }
+                    // Delete the original file
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        contentResolver.delete(sourceFileUri, null)
+                    } else {
+                        contentResolver.delete(sourceFileUri, selection,selectionArgs)
+
+                    }
+                }
+            }
+        }
+    }
 
     suspend fun moveFiles(sourcePath: String, destinationPath: String, extension: String) {
 
         val source = Uri.parse((sourcePath))
-        val destination = Uri.parse(destinationPath)
-        val sourceFolder = DocumentFile.fromTreeUri(context, source) ?: DocumentFile.fromSingleUri(context, source)
-        val destFolder = DocumentFile.fromTreeUri(context, destination) ?: DocumentFile.fromSingleUri(context, destination)
+        val destination = Uri.parse(Uri.decode(destinationPath))
+
+        val contentResolver = context.contentResolver
+
+
+        val sourceFolder =
+            DocumentFile.fromTreeUri(context, source) ?: DocumentFile.fromSingleUri(context, source)
+        val destFolder =
+            DocumentFile.fromTreeUri(context, destination) ?: DocumentFile.fromSingleUri(
+                context,
+                destination
+            )
 
         if (sourceFolder == null || !sourceFolder.exists() || !sourceFolder.isDirectory) {
+
             throw Exception("Source folder does not exist or is not accessible. ${sourceFolder?.uri}")
 
         }
@@ -195,38 +418,71 @@ class FileMover(private val context: Context) {
         }
         // Open an InputStream to read the content of the original file
 
-            val contentResolver = context.contentResolver
-            var counter = 0
-            sourceFolder.listFiles().forEach { sourceFile ->
-println("file #$counter ${sourceFile.uri}")
-                sourceFile?.let { file ->
-                    if (file.name?.endsWith(extension) == true) {
-                        counter++
+        var counter = 0
+        sourceFolder.listFiles().forEach { sourceFile ->
+            println("file #$counter ${sourceFile.uri}")
+            sourceFile?.let { file ->
+                if (file.name?.endsWith(extension) == true) {
+                    counter++
 
-                        println("found ${file.uri} !")
-                        val newFile = destFolder.createFile(file.type ?: "*/*", file.name!!)
-                            ?: throw Exception("Failed to copy file in the destination file.")
+                    println("found ${file.uri} !")
+                    val newFile = destFolder.createFile(file.type ?: "*/*", file.name!!)
+                        ?: throw Exception("Failed to copy file in the destination file.")
 
-                        contentResolver.openInputStream(file.uri)?.use { inputStream ->
-                            // Open an OutputStream to write the content of the original file to the new file
-                            contentResolver.openOutputStream(newFile.uri)
-                                ?.use { outputStream ->
-                                    inputStream.copyTo(outputStream)
-                                }
-                        }
-                        // Delete the original file
-                        if (!file.delete()) {
-                            throw IOException("Failed to delete the original file.")
-                        }
+                    contentResolver.openInputStream(file.uri)?.use { inputStream ->
+                        // Open an OutputStream to write the content of the original file to the new file
+                        contentResolver.openOutputStream(newFile.uri)
+                            ?.use { outputStream ->
+                                println("to be moved to ")
+                                inputStream.copyTo(outputStream)
+                            }
+                    }
+                    // Delete the original file
+                    if (!file.delete()) {
+                        throw IOException("Failed to delete the original file.")
                     }
                 }
             }
+        }
 
-            if (counter == 0)  {throw NoFileFoundException("No file found with $extension extension.")
-            }
+        if (counter == 0) {
+            throw NoFileFoundException("No file found with $extension extension.")
+        }
 
 
     }
+
+    override fun onCreate(): Boolean {
+        return true
+    }
+    override fun query(
+        uri: Uri,
+        projection: Array<out String>?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+        sortOrder: String?
+    ): Cursor? = context.contentResolver.query(
+        uri,
+        projection,
+        selection,
+        selectionArgs,
+        sortOrder
+    )
+
+    override fun getType(uri: Uri): String? {
+        return context.contentResolver.getType(uri)
+    }
+
+    override fun insert(uri: Uri, values: ContentValues?): Uri? = context.contentResolver.insert(uri,values)
+
+    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int = context.contentResolver.delete(uri,selection,selectionArgs)
+
+    override fun update(
+        uri: Uri,
+        values: ContentValues?,
+        selection: String?,
+        selectionArgs: Array<out String>?
+    ): Int = context.contentResolver.update(uri,values,selection,selectionArgs)
 }
 
 
