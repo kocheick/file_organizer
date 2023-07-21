@@ -7,9 +7,12 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+import android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.os.Environment.DIRECTORY_DOCUMENTS
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.MediaStore.MediaColumns.DISPLAY_NAME
@@ -19,10 +22,12 @@ import android.provider.MediaStore.MediaColumns.SIZE
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.core.net.toFile
 import androidx.documentfile.provider.DocumentFile
 import com.example.fileorganizer.getActivity
 import com.example.fileorganizer.model.NoFileFoundException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 import java.io.*
 
@@ -299,10 +304,13 @@ class FileMover() : ContentProvider() {
         destinationFolderUri: Uri,
         extension: String
     ) {
+        println("Starting move...")
+
         // Check if the source folder exists
-        val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-        context.contentResolver.takePersistableUriPermission(sourceFolderUri, takeFlags)
-        context.grantUriPermission(context.packageName,sourceFolderUri, takeFlags)
+        val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
+//        context.contentResolver.takePersistableUriPermission(sourceFolderUri, takeFlags)
+//        context.grantUriPermission(context.packageName,sourceFolderUri, takeFlags)
+        println("your file ${(Environment.getExternalStorageDirectory()).listFiles()?.find { it.name.contains("Pictures") }?.listFiles()?.toList()}")
         val sourceFolder = DocumentFile.fromTreeUri(context, sourceFolderUri)
         if (sourceFolder == null || !sourceFolder.exists() || !sourceFolder.isDirectory) {
             println("Source folder does not exist.")
@@ -315,7 +323,8 @@ class FileMover() : ContentProvider() {
             println("Destination folder does not exist.")
             return
         }
-        val contentResolver = context.contentResolver
+        val contentResolver = context.getActivity()?.contentResolver!!
+        println("PREPARING QUERY ")
 
 
 
@@ -325,7 +334,7 @@ class FileMover() : ContentProvider() {
         val projection = arrayOf(
             MediaStore.MediaColumns._ID,
             MediaStore.MediaColumns.DISPLAY_NAME,
-            MediaStore.MediaColumns.MIME_TYPE
+            MediaStore.MediaColumns.MIME_TYPE,
         )
 
         // Define the selection criteria
@@ -359,17 +368,17 @@ class FileMover() : ContentProvider() {
                 val fileName = cursor.getString(nameColumnIndex)
                 val mimeType = cursor.getString(mimeTypeColumnIndex)
 
-                println("PRINTING PRINTIN $fileId $fileName $")
                 val sourceFileUri = ContentUris.withAppendedId(queryUri, fileId)
                 context.getActivity()?.contentResolver?.takePersistableUriPermission(sourceFileUri.normalizeScheme(), takeFlags)
                 context.getActivity()?.grantUriPermission(context.packageName,sourceFileUri, takeFlags)
+                println("PRINTING PRINTIN $fileId $fileName $sourceFileUri")
 
                 val sourceFile = DocumentFile.fromSingleUri(context, sourceFileUri)
 
                 if (sourceFile != null && sourceFile.isFile) {
                     println("BEFORE COPYING ")
 
-                    val destinationFile = destinationFolder?.createFile(mimeType, fileName)
+                    val destinationFile = destinationFolder.createFile(mimeType, fileName)
                     if (destinationFile != null) {
                         println("PRINTING COPYING ")
 
@@ -386,6 +395,8 @@ class FileMover() : ContentProvider() {
                         contentResolver.delete(sourceFileUri, selection,selectionArgs)
 
                     }
+//need to use correct file uri
+//                        DocumentFile.fromSingleUri(context, sourceFileUri)?.delete()
                 }
             }
         }
@@ -395,17 +406,20 @@ class FileMover() : ContentProvider() {
 
         val source = Uri.parse((sourcePath))
         val destination = Uri.parse(Uri.decode(destinationPath))
+        val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
+        context.getActivity()?.contentResolver?.takePersistableUriPermission(source, takeFlags)
+        context.getActivity()?.grantUriPermission(context.packageName,source, takeFlags)
+        context.getActivity()?.contentResolver?.takePersistableUriPermission(destination, takeFlags)
+        context.getActivity()?.grantUriPermission(context.packageName,destination, takeFlags)
 
         val contentResolver = context.contentResolver
 
 
-        val sourceFolder =
-            DocumentFile.fromTreeUri(context, source) ?: DocumentFile.fromSingleUri(context, source)
-        val destFolder =
-            DocumentFile.fromTreeUri(context, destination) ?: DocumentFile.fromSingleUri(
-                context,
-                destination
-            )
+        val sourceFolder = DocumentFile.fromTreeUri(context, source)
+//                ?: DocumentFile.fromSingleUri(context, source)
+        val destFolder = DocumentFile.fromTreeUri(context, destination)
+//                ?: DocumentFile.fromSingleUri(context, destination)
+
 
         if (sourceFolder == null || !sourceFolder.exists() || !sourceFolder.isDirectory) {
 
@@ -483,6 +497,55 @@ class FileMover() : ContentProvider() {
         selection: String?,
         selectionArgs: Array<out String>?
     ): Int = context.contentResolver.update(uri,values,selection,selectionArgs)
+
+    suspend fun moveFilesByType(source: String, destination: String, extension: String) {
+
+        val sourceFileUri = Uri.parse(source)
+        val destinationFolderUri = Uri.parse(destination)
+
+        val sourceFolder = DocumentFile.fromTreeUri(context, sourceFileUri) ?: throw Exception("Source folder does not exist or is not accessible.")
+        val destinationFolder = DocumentFile.fromTreeUri(context, destinationFolderUri) ?: throw Exception("Destination folder does not exist or is not accessible.")
+
+
+        val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
+        context.getActivity()?.contentResolver?.takePersistableUriPermission(sourceFileUri, takeFlags)
+        context.getActivity()?.grantUriPermission(context.packageName,sourceFileUri, takeFlags)
+        context.getActivity()?.contentResolver?.takePersistableUriPermission(destinationFolderUri, takeFlags)
+        context.getActivity()?.grantUriPermission(context.packageName,destinationFolderUri, takeFlags)
+
+
+
+        val filesToMove = sourceFolder.listFiles().filter { file-> file.name?.endsWith(".$extension") == true }
+      val contentResolver= context.contentResolver
+        println("Your files to be moves ${filesToMove.first().name} ...")
+
+        withContext(IO){
+            if (filesToMove.isNotEmpty()){
+                println("Moving files...")
+
+                filesToMove.forEach { file ->
+
+                    val destinationFile =
+                        destinationFolder.createFile(file.type ?: "*/*", file.name!!)
+                            ?: throw Exception("Failed to copy file into destination folder")
+
+                    contentResolver.openOutputStream(destinationFile.uri)?.use { outputStream ->
+                        contentResolver.openInputStream(file.uri)?.use { inputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+
+                    // Delete the original file
+                    if (!file.delete()) {
+                        throw IOException("Failed to delete the original.")
+                    }
+                }
+            } else {
+                println("No file file with extension found")
+
+            }
+        }
+    }
 }
 
 

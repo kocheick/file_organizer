@@ -1,21 +1,23 @@
+@file:OptIn(ExperimentalPermissionsApi::class)
+
 package com.example.fileorganizer
 
 import android.Manifest
 import android.Manifest.permission.MANAGE_EXTERNAL_STORAGE
 import android.app.Activity
 import android.app.Activity.RESULT_OK
-import android.content.Context
 import android.content.Intent
 import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.provider.DocumentsContract
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
+import android.provider.Settings
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -57,13 +59,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
-import androidx.core.app.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.example.fileorganizer.model.UITaskRecord
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.PermissionStatus
-import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.MultiplePermissionsState
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 
 @Composable
@@ -419,10 +420,11 @@ fun TaskForm(
     val isRoot: (String?) -> Boolean =
         { path -> if (path == null) false else Uri.parse(path).lastPathSegment.equals("primary:") }
     val context = LocalContext.current
-    val permission = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) MANAGE_EXTERNAL_STORAGE else Manifest.permission.WRITE_EXTERNAL_STORAGE
+    val _permissions = mutableListOf(Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE)
+    val permissions = remember(_permissions) {
+        if (Build.VERSION.SDK_INT >=VERSION_CODES.R) _permissions.plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).plus(MANAGE_EXTERNAL_STORAGE).toTypedArray() else _permissions.toTypedArray()
     }
-val permissioState = rememberPermissionState(permission = permission )
+val permissioState = rememberMultiplePermissionsState(permissions = permissions.toList())
 
 
     val sourceDirectoryPickerLauncher = pickDirectory(context = context.getActivity()?: return, pickedUri = {
@@ -444,7 +446,8 @@ val permissioState = rememberPermissionState(permission = permission )
     val typeTextState = remember { mutableStateOf(TextFieldValue(taskToBeEdited?.extension ?: "")) }
 
 
-
+val srcLauncher = permissionLauncher(sourceDirectoryPickerLauncher, sourcePath, permissioState)
+val destLauncher = permissionLauncher(destinationDirectoryPickerLauncher, destPath, permissioState)
 
     Column(
         modifier = Modifier
@@ -482,18 +485,23 @@ val permissioState = rememberPermissionState(permission = permission )
             text = stringResource(R.string.source),
             path = formattedSource.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
-                when(permissioState.status){
-                    is PermissionStatus.Granted -> {
-                        println("GRANTED")
+                srcLauncher.launch(permissions)
 
-                        sourceDirectoryPickerLauncher.launch(sourcePath.value?.toUri()
-                        )
-                    }
-                    is PermissionStatus.Denied ->{
-                        println("DENIED")
-                        permissioState.launchPermissionRequest()
-                    }
-                }
+//                when(permissioState.status){
+//                    is PermissionStatus.Granted -> {
+//                        println("GRANTED")
+//
+//                        sourceDirectoryPickerLauncher.launch(sourcePath.value?.toUri()
+//                        )
+//                    }
+//                    is PermissionStatus.Denied ->{
+//                        permissioState.launchPermissionRequest()
+////                        sourceDirectoryPickerLauncher.launch(sourcePath.value?.toUri())
+//
+//                         context.getActivity()?.startActivity(Intent( if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION else Intent.ACTION_OPEN_DOCUMENT_TREE))
+//
+//                    }
+//                }
 
 //                checkAndRequestFileStoragePermission(context,android.Manifest.permission.MANAGE_DOCUMENTS,sourceDirectoryPickerLauncher)
 //                checkAndRequestFileStoragePermission(context.getActivity()!!,Manifest.permission.WRITE_EXTERNAL_STORAGE,sourceDirectoryPickerLauncher)
@@ -518,16 +526,19 @@ val permissioState = rememberPermissionState(permission = permission )
             text = stringResource(R.string.destination),
             path = formattedDestination.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
+                destLauncher.launch(permissions)
+
 //                destinationDirectoryPickerLauncher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
 //                checkAndRequestFileStoragePermission(context.getActivity()!!,Manifest.permission.WRITE_EXTERNAL_STORAGE,destinationDirectoryPickerLauncher)
-                when(permissioState.status){
-                    is PermissionStatus.Granted -> {
-                        destinationDirectoryPickerLauncher.launch(destPath.value?.toUri())
-                    }
-                    is PermissionStatus.Denied ->{
-                        permissioState.launchPermissionRequest()
-                    }
-                }
+//                when(permissioState.status){
+//                    is PermissionStatus.Granted -> {
+//                        destinationDirectoryPickerLauncher.launch(destPath.value?.toUri())
+//                    }
+//                    is PermissionStatus.Denied ->{
+//                        permissioState.launchPermissionRequest()
+//                        destinationDirectoryPickerLauncher.launch(destPath.value?.toUri())
+//                    }
+//                }
             })
 
         sourcePath.value?.let { onSourceUriChange(it) }
@@ -544,6 +555,32 @@ val permissioState = rememberPermissionState(permission = permission )
     }
 
 }
+
+@Composable
+private fun permissionLauncher(
+    directoryPickerLauncher: ManagedActivityResultLauncher<Uri?, Uri?>,
+    sourcePath: MutableState<String?>,
+    permissioState: MultiplePermissionsState
+) =
+    rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissionMap ->
+
+            val areGranted = permissionMap.values.reduce { acc, next -> acc && next }
+            if (areGranted) {
+                                        println("GRANTED")
+
+                directoryPickerLauncher.launch(sourcePath.value?.toUri())
+            }
+          else {
+                permissioState.launchMultiplePermissionRequest()
+
+                directoryPickerLauncher.launch(sourcePath.value?.toUri())
+
+            }
+            println("is it back to granted $areGranted ${permissionMap.values.reduce { acc, next -> acc && next }}")
+
+        })
 
 @Composable
 private fun SwapPathsButton(
@@ -655,8 +692,8 @@ fun pickDirectory(context: Activity, pickedUri: (String) -> Unit): ManagedActivi
                         println("your URI full: ${Uri.decode(it.toString())}")
                         println("decode: ${Uri.decode(it.toString())}")
                         println("tostring : ${(it.toString())}")
-                        context.getActivity()?.contentResolver?.takePersistableUriPermission(it, takeFlags)
-                        context.getActivity()?.grantUriPermission(context.packageName,it, takeFlags)
+//                        context.getActivity()!!.grantUriPermission(context.packageName,it, takeFlags)
+//                        context.getActivity()!!.contentResolver?.takePersistableUriPermission(it, takeFlags)
                         pickedUri((it.toString()))
 
                     }

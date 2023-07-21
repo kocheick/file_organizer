@@ -190,16 +190,24 @@ println(exception.message)
 
             viewModelScope.launch(IO + coroutineExceptionHandler) {
                 val items = _tasks.filter { it.isActive }
+                println("VIEWMODEL : action processing ${items.size} items")
+
                 if (items.isNotEmpty()){
                     delay(DELAY_TIME)
 
                 items.forEach { task ->
-
-                    fileMover.moveFilesWithExtension(
-                        Uri.parse(task.source),
-                        task.destination.toUri(),
+                    println("VIEWMODEL : processing with ext ${task.extension}")
+                    fileMover.moveFilesByType(
+                        task.source,
+                        task.destination,
                         task.extension.lowercase().trim()
                     )
+
+//                    fileMover.moveFilesWithExtension(
+//                        Uri.parse(task.source),
+//                        task.destination.toUri(),
+//                        task.extension.lowercase().trim()
+//                    )
 //                    fileMover.moveFiles(
 //                        task.source,
 //                        task.destination,
@@ -217,8 +225,12 @@ println(exception.message)
                 }
                     _state.value = UiState.Data(_tasks.map { it.toUITaskRecord() },null )
 
-                }else throw EmptyContentException("No item to be processed.")
-        }
+                }else {
+
+                    println("VIEWMODEL : list is empty")
+                    throw EmptyContentException("No item to be processed.")
+                }
+            }
 //            initTasksΩΩTasks()
     }
 
