@@ -1,18 +1,14 @@
 package com.example.fileorganizer.service
 
-import android.content.ContentProvider
 import android.content.ContentResolver
 import android.content.ContentUris
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.os.Environment.DIRECTORY_DOCUMENTS
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.MediaStore.MediaColumns.DISPLAY_NAME
@@ -22,7 +18,6 @@ import android.provider.MediaStore.MediaColumns.SIZE
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.core.net.toFile
 import androidx.documentfile.provider.DocumentFile
 import com.example.fileorganizer.getActivity
 import com.example.fileorganizer.model.NoFileFoundException
@@ -31,7 +26,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 import java.io.*
 
-class FileMover() : ContentProvider() {
+class FileMover{
     private lateinit var context: Context
 
     fun initService(context: Context){
@@ -460,89 +455,90 @@ class FileMover() : ContentProvider() {
         }
 
         if (counter == 0) {
-            throw NoFileFoundException("No file found with $extension extension.")
+            throw NoFileFoundException("No file found with $extension extension. $counter")
         }
 
 
     }
 
-    override fun onCreate(): Boolean {
-        return true
-    }
-    override fun query(
-        uri: Uri,
-        projection: Array<out String>?,
-        selection: String?,
-        selectionArgs: Array<out String>?,
-        sortOrder: String?
-    ): Cursor? = context.contentResolver.query(
-        uri,
-        projection,
-        selection,
-        selectionArgs,
-        sortOrder
-    )
-
-    override fun getType(uri: Uri): String? {
-        return context.contentResolver.getType(uri)
-    }
-
-    override fun insert(uri: Uri, values: ContentValues?): Uri? = context.contentResolver.insert(uri,values)
-
-    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int = context.contentResolver.delete(uri,selection,selectionArgs)
-
-    override fun update(
-        uri: Uri,
-        values: ContentValues?,
-        selection: String?,
-        selectionArgs: Array<out String>?
-    ): Int = context.contentResolver.update(uri,values,selection,selectionArgs)
 
     suspend fun moveFilesByType(source: String, destination: String, extension: String) {
 
+        val (sourceFolder, destinationFolder) = getFolderAsDocumentFiles(source, destination)
+
+
+        val filesToMove = sourceFolder.listFiles().filter { file-> file.isFile && file.name?.endsWith(".$extension") == true }
+
+
+
+        moveFiles(filesToMove, destinationFolder,     context.contentResolver)
+    }
+
+    private fun getFolderAsDocumentFiles(
+        source: String,
+        destination: String
+    ): Pair<DocumentFile, DocumentFile> {
         val sourceFileUri = Uri.parse(source)
         val destinationFolderUri = Uri.parse(destination)
 
-        val sourceFolder = DocumentFile.fromTreeUri(context, sourceFileUri) ?: throw Exception("Source folder does not exist or is not accessible.")
-        val destinationFolder = DocumentFile.fromTreeUri(context, destinationFolderUri) ?: throw Exception("Destination folder does not exist or is not accessible.")
+        val sourceFolder = DocumentFile.fromTreeUri(context, sourceFileUri)
+            ?: throw Exception("Source folder does not exist or is not accessible.")
+        val destinationFolder = DocumentFile.fromTreeUri(context, destinationFolderUri)
+            ?: throw Exception("Destination folder does not exist or is not accessible.")
 
 
-        val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
-        context.getActivity()?.contentResolver?.takePersistableUriPermission(sourceFileUri, takeFlags)
-        context.getActivity()?.grantUriPermission(context.packageName,sourceFileUri, takeFlags)
-        context.getActivity()?.contentResolver?.takePersistableUriPermission(destinationFolderUri, takeFlags)
-        context.getActivity()?.grantUriPermission(context.packageName,destinationFolderUri, takeFlags)
+        val takeFlags = FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
 
 
+        context.getActivity()?.apply {
+            contentResolver?.apply {
+                takePersistableUriPermission(sourceFileUri, takeFlags)
+                takePersistableUriPermission(destinationFolderUri, takeFlags)
+            }
+            grantUriPermission(context.packageName, sourceFileUri, takeFlags)
+            grantUriPermission(context.packageName, destinationFolderUri, takeFlags)
 
-        val filesToMove = sourceFolder.listFiles().filter { file-> file.name?.endsWith(".$extension") == true }
-      val contentResolver= context.contentResolver
-        println("Your files to be moves ${filesToMove.first().name} ...")
+        }
+        return Pair(sourceFolder, destinationFolder)
+    }
 
-        withContext(IO){
-            if (filesToMove.isNotEmpty()){
+    private suspend fun moveFiles(
+        filesToMove: List<DocumentFile>,
+        destinationFolder: DocumentFile,
+        contentResolver: ContentResolver
+    ) {
+        when {
+            filesToMove.isNotEmpty() -> {
                 println("Moving files...")
 
                 filesToMove.forEach { file ->
+                    println("Your files to be moves ${file.name} ...")
+                    withContext(IO) {
 
-                    val destinationFile =
-                        destinationFolder.createFile(file.type ?: "*/*", file.name!!)
-                            ?: throw Exception("Failed to copy file into destination folder")
+                        val destinationFile =
+                            destinationFolder.createFile(file.type ?: "*/*", file.name!!)
+                                ?: throw IOException("Failed to create new file in destination folder")
 
-                    contentResolver.openOutputStream(destinationFile.uri)?.use { outputStream ->
-                        contentResolver.openInputStream(file.uri)?.use { inputStream ->
-                            inputStream.copyTo(outputStream)
+                        contentResolver.openOutputStream(destinationFile.uri)?.use { outputStream ->
+                            contentResolver.openInputStream(file.uri)?.use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
+                                ?: throw IOException("An error occured while copying file ${file.name} into destination folder.")
+                        }
+                            ?: throw IOException("An error occured while copying file ${file.name} from source folder.")
+
+                        // Delete the original file
+                        if (!file.delete()) {
+                            throw IOException("Failed to delete original from source folder.")
                         }
                     }
-
-                    // Delete the original file
-                    if (!file.delete()) {
-                        throw IOException("Failed to delete the original.")
-                    }
                 }
-            } else {
-                println("No file file with extension found")
 
+
+            }
+
+            else -> {
+                println("No file file with extension found")
             }
         }
     }
