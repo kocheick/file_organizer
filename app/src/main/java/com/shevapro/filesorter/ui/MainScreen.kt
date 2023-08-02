@@ -18,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -59,8 +60,6 @@ fun MainScreen(viewModel: MainViewModel) {
     val itemToEdit by viewModel.itemToEdit.collectAsState()
     val itemToRemove by viewModel.itemToRemove.collectAsState()
     val itemToAdd by viewModel.itemToAdd.collectAsState()
-
-    val context = LocalContext.current
 
 
 
@@ -229,10 +228,10 @@ fun MainScreen(viewModel: MainViewModel) {
 
 @Composable
 private fun EmptyContentScreen() {
-    Text(
-        text = stringResource(R.string.no_item_created),
-        fontSize = 24.sp
-    )
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
+        Image(modifier = Modifier.size(620.dp), painter = painterResource(id = R.drawable.ic_launcher_foreground), contentDescription ="App logo.", alpha = 0.02F , contentScale = ContentScale.Fit)
+
+        Text(text = stringResource(R.string.no_item_created), fontSize = 24.sp) }
 }
 
 
