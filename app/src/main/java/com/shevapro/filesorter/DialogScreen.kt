@@ -12,6 +12,7 @@ import android.net.Uri
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
 import android.provider.Settings
+import android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
@@ -59,9 +60,10 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.MultiplePermissionsState
+import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.shevapro.filesorter.Utility.grantUrisPermissions
+import com.google.accompanist.permissions.rememberPermissionState
 import com.shevapro.filesorter.model.UITaskRecord
 
 
@@ -431,16 +433,6 @@ fun TaskForm(
 
     val typeTextState = remember { mutableStateOf(TextFieldValue(taskToBeEdited.extension)) }
 
-    val _permissions = listOf(
-        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        Manifest.permission.READ_EXTERNAL_STORAGE
-    )
-    val permissions = remember {
-        if (VERSION.SDK_INT >= VERSION_CODES.R) _permissions.plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-            .plus(MANAGE_EXTERNAL_STORAGE).toTypedArray() else _permissions.toTypedArray()
-    }
-    val permissionState = rememberMultiplePermissionsState(permissions = permissions.toList())
-
 
     val sourceDirectoryPickerLauncher = pickDirectory(pickedUri = {
         sourcePath.value = it
@@ -448,9 +440,17 @@ fun TaskForm(
     val destinationDirectoryPickerLauncher = pickDirectory(pickedUri = {
         destPath.value = it
     })
-    val srcLauncher = permissionLauncher(sourceDirectoryPickerLauncher, sourcePath, permissionState)
+    val _permissions = listOf(
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    )
+    val permissions = remember {
+        if (VERSION.SDK_INT >= VERSION_CODES.R) _permissions.plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+            .plus(MANAGE_EXTERNAL_STORAGE).toList() else _permissions.toList()
+    }
+    val srcLauncher = permissionLauncher(sourceDirectoryPickerLauncher, sourcePath, permissions)
     val destLauncher =
-        permissionLauncher(destinationDirectoryPickerLauncher, destPath, permissionState)
+        permissionLauncher(destinationDirectoryPickerLauncher, destPath,permissions)
 
     Column(
         modifier = Modifier
@@ -488,7 +488,7 @@ fun TaskForm(
             text = stringResource(R.string.source),
             path = formattedSource.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
-                srcLauncher.launch(permissions)
+                srcLauncher.launch(permissions.toTypedArray())
             }
         )
         // SWAP BUTTON
@@ -509,7 +509,7 @@ fun TaskForm(
             text = stringResource(R.string.destination),
             path = formattedDestination.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
-                destLauncher.launch(permissions)
+                destLauncher.launch(permissions.toTypedArray())
 
             })
 
@@ -526,10 +526,20 @@ fun TaskForm(
 @Composable
 fun permissionLauncher(
     directoryPickerLauncher: ManagedActivityResultLauncher<Uri?, Uri?>,
-    sourcePath: MutableState<String?>,
-    permissioState: MultiplePermissionsState
-) =
-    rememberLauncherForActivityResult(
+    sourcePath: MutableState<String?>, permissions : List<String>
+): ManagedActivityResultLauncher<Array<String>, Map<String, @JvmSuppressWildcards Boolean>> {
+
+    val permissionState  = rememberMultiplePermissionsState(permissions = permissions)
+
+    val storageAccessPermissionState  = if (VERSION.SDK_INT >= VERSION_CODES.R) {
+        rememberPermissionState(permission =ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION )
+    } else {
+        rememberPermissionState(permission = Manifest.permission.WRITE_EXTERNAL_STORAGE )
+
+    }
+
+
+    val launcher =  rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
         onResult = { permissionMap ->
 
@@ -538,24 +548,41 @@ fun permissionLauncher(
                 println("Permission granted")
 
                 directoryPickerLauncher.launch(sourcePath.value?.toUri())
-            } else if (permissioState.shouldShowRationale) {
+            } else if (permissionState.shouldShowRationale) {
                 println("Permission should show rational")
 
-                permissioState.permissions.forEach {
+                permissionState.permissions.forEach {
                     it.launchPermissionRequest()
                 }
 
             } else {
                 println("Permission not granted")
+                if (VERSION.SDK_INT >= VERSION_CODES.R) {
+                    when(storageAccessPermissionState.status){
+                        is PermissionStatus.Granted -> {
+                            println("Permission granted here but weird")
 
-                permissioState.launchMultiplePermissionRequest()
+                            directoryPickerLauncher.launch(sourcePath.value?.toUri())
+                        }
+                        is PermissionStatus.Denied -> {
+                            println("Permission denied --> launching perm. request")
 
-//                directoryPickerLauncher.launch(sourcePath.value?.toUri())
+                            storageAccessPermissionState.launchPermissionRequest()
+                            permissionState.launchMultiplePermissionRequest()
+
+                        }
+                    }
+                }
+                else permissionState.launchMultiplePermissionRequest()
+
+                directoryPickerLauncher.launch(sourcePath.value?.toUri())
 
             }
             println("is it back to granted $areGranted ${permissionMap.values.reduce { acc, next -> acc && next }}")
 
         })
+    return launcher
+}
 
 @Composable
 private fun SwapPathsButton(

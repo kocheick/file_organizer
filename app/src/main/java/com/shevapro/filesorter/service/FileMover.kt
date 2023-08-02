@@ -32,7 +32,7 @@ class FileMover private constructor() {
             )
             println("getting files to move")
             val filesToMove = sourceFolder.listFiles()
-                .filter { file -> file.isFile && file.name?.endsWith(".$extension") == true }
+                .filter { file -> file.isFile && file.name?.endsWith(extension) == true }
             println("moving files")
 
             moveFiles(filesToMove, destinationFolder, context.contentResolver)
@@ -57,12 +57,13 @@ class FileMover private constructor() {
         val sourceFileUri = Uri.parse(source)
         val destinationFolderUri = Uri.parse(destination)
 
+        grantUrisPermissions(sourceFileUri, destinationFolderUri, context)
+
         val sourceFolder = DocumentFile.fromTreeUri(context, sourceFileUri)
             ?: throw Exception("Source folder does not exist or is not accessible.")
         val destinationFolder = DocumentFile.fromTreeUri(context, destinationFolderUri)
             ?: throw Exception("Destination folder does not exist or is not accessible.")
 
-        grantUrisPermissions(sourceFileUri, destinationFolderUri, context)
 
         return Pair(sourceFolder, destinationFolder)
     }
