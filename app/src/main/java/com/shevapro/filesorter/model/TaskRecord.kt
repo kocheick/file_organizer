@@ -1,11 +1,10 @@
-package com.shevapro.filesorter
+package com.shevapro.filesorter.model
 
 import android.net.Uri
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
-import com.shevapro.filesorter.model.UITaskRecord
 
 @Entity(tableName = "task_records")
 data class TaskRecord(

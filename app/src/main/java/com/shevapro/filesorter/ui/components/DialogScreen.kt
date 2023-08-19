@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalPermissionsApi::class)
 
-package com.shevapro.filesorter
+package com.shevapro.filesorter.ui.components
 
 import android.Manifest
 import android.Manifest.permission.MANAGE_EXTERNAL_STORAGE
@@ -60,10 +60,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
+import com.shevapro.filesorter.R
+import com.shevapro.filesorter.Utility
+import com.shevapro.filesorter.Utility.grantUrisPermissions
 import com.shevapro.filesorter.model.UITaskRecord
 
 
@@ -687,7 +689,7 @@ fun pickDirectory(pickedUri: (String) -> Unit): ManagedActivityResultLauncher<Ur
                 println("your URI full: ${Uri.decode(it.toString())}")
                 println("decode: ${Uri.decode(it.toString())}")
                 println("tostring : ${(it.toString())}")
-//                grantUrisPermissions(it, context = context)
+                grantUrisPermissions(it, context = context)
                 pickedUri((it.toString()))
 
             }
@@ -746,3 +748,4 @@ fun checkAndRequestFileStoragePermission(
         ActivityCompat.requestPermissions(context, arrayOf(permission), 0)
     }
 }
+

@@ -1,4 +1,4 @@
-package com.shevapro.filesorter.ui
+package com.shevapro.filesorter.ui.components
 
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -29,19 +28,14 @@ import androidx.compose.ui.unit.sp
 import com.shevapro.filesorter.*
 import com.shevapro.filesorter.R
 import com.shevapro.filesorter.Utility.emptyInteractionSource
+import com.shevapro.filesorter.model.AppStatistic
 import com.shevapro.filesorter.model.EmptyContentException
 import com.shevapro.filesorter.model.MissingFieldException
 import com.shevapro.filesorter.model.NoFileFoundException
 import com.shevapro.filesorter.model.UITaskRecord
 import com.shevapro.filesorter.model.UiState
-import com.shevapro.filesorter.ui.components.LoadingScreen
-import com.shevapro.filesorter.ui.components.NotificationDialog
-import com.shevapro.filesorter.ui.viewmodel.MainViewModel
-import com.shevapro.filesorter.AddTaskDialog
-import com.shevapro.filesorter.EditTaskDialog
-import com.shevapro.filesorter.RemovalDialog
-import com.shevapro.filesorter.TaskListContent
 import com.shevapro.filesorter.ui.theme.AppTheme
+import com.shevapro.filesorter.ui.viewmodel.MainViewModel
 
 
 @RequiresApi(Build.VERSION_CODES.R)
@@ -61,6 +55,8 @@ fun MainScreen(viewModel: MainViewModel) {
     val itemToRemove by viewModel.itemToRemove.collectAsState()
     val itemToAdd by viewModel.itemToAdd.collectAsState()
 
+    val appStats: AppStatistic by viewModel.appStats.collectAsState()
+
 
 
     AppTheme {
@@ -74,7 +70,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     },
 
                     onExecuteTasksClicked = {
-                        viewModel.processTasks()
+                        viewModel.sortFiles()
                     })
             },
             floatingActionButtonPosition = FabPosition.End,
@@ -97,22 +93,24 @@ fun MainScreen(viewModel: MainViewModel) {
                             if (items.isEmpty()) EmptyContentScreen()
                             else {
                                 val isRemovalDialogOpen = rememberSaveable { mutableStateOf(false) }
+                                Column{
+                                    Stats(appStatistic = appStats)
+                                    TaskListContent(
+                                        tasksList = items,
+                                        onItemClick = { clickedTask ->
 
-                                TaskListContent(
-                                    tasksList = items,
-                                    onItemClick = { clickedTask ->
+                                            viewModel.onUpdateItemToEdit(clickedTask)
 
-                                        viewModel.onUpdateItemToEdit(clickedTask)
+                                            viewModel.openEditDialog()
+                                        },
+                                        onRemoveItem = { itemToBeRemoved ->
+                                            viewModel.onUpdateItemToRemove(itemToBeRemoved)
+                                            isRemovalDialogOpen.value = true
 
-                                        viewModel.openEditDialog()
-                                    },
-                                    onRemoveItem = { itemToBeRemoved ->
-                                        viewModel.onUpdateItemToRemove(itemToBeRemoved)
-                                        isRemovalDialogOpen.value = true
-
-                                    }, onToggleState = { itemToBeToggled ->
-                                        viewModel.toggleStateFor(itemToBeToggled)
-                                    })
+                                        }, onToggleState = { itemToBeToggled ->
+                                            viewModel.toggleStateFor(itemToBeToggled)
+                                        })
+                                }
 
 
 
@@ -125,7 +123,6 @@ fun MainScreen(viewModel: MainViewModel) {
                                         onSaveUpdates = { viewModel.onUpdateItemToEdit(it) },
                                         onDismiss = {
                                             viewModel.closeEditDialog()
-//                                            viewModel.onUpdateItemToEdit(null)
                                         })
                                 }
 
@@ -148,58 +145,18 @@ fun MainScreen(viewModel: MainViewModel) {
 
                             }
 
-                            AnimatedVisibility(currentState.exception != null) {
-                                when (val exception = currentState.exception) {
-
-                                    is MissingFieldException -> {
-                                        NotificationDialog(title = stringResource(id = R.string.missing_field),
-                                            message = exception.errorMessage,
-                                            onDismiss = {
-//                                        if (itemToAdd != null && !isAddDialogOpen.value) isAddDialogOpen.value = true
-//                                        else if (itemToEdit != null && !isEditDialogOpen.value) isEditDialogOpen.value = true
-
-                                                viewModel.dismissError()
-
-                                            })
-                                    }
-
-                                    is NoFileFoundException -> {
-                                        NotificationDialog(title = "Result",
-                                            message = exception.message
-                                                ?: return@AnimatedVisibility,
-                                            onDismiss = {
-                                                viewModel.dismissError()
-                                            })
-                                    }
-
-                                    is EmptyContentException -> {
-                                        NotificationDialog(title = "Alert",
-                                            message = exception.message
-                                                ?: return@AnimatedVisibility,
-                                            onDismiss = {
-                                                viewModel.dismissError()
-                                            })
-                                    }
-
-                                    else -> {
-                                        NotificationDialog(title = "Oops.. an error occurred.",
-                                            message = exception?.message
-                                                ?: return@AnimatedVisibility,
-                                            onDismiss = {
-                                                viewModel.dismissError()
-                                            })
-                                    }
-                                }
-                            }
                         }
 
+                        is UiState.Processing -> {
+
+                            ProgressScreen(currentState.stats)
+                        }
                     }
 
 
                     AnimatedVisibility(isAddDialogOpen) {
                         AddTaskDialog(onAddItem = { extension, src, dest ->
                             viewModel.addNewItemWith(extension, src, dest)
-//                            viewModel.onUpdateItemToAdd(null)
 
                         },
                             onSaveUpdates = {
@@ -209,8 +166,58 @@ fun MainScreen(viewModel: MainViewModel) {
                             item = itemToAdd ?: return@AnimatedVisibility,
                             onDismiss = {
                                 viewModel.closeAddDialog()
-                                // cpmment this line out will let user add new item from previous properties instead of blank/new item
                             })
+                    }
+                    if (mainState is UiState.Data) AnimatedVisibility((mainState as UiState.Data).exception != null) {
+                        when (val exception = (mainState as UiState.Data).exception) {
+
+                            is MissingFieldException -> {
+                                NotificationDialog(title = stringResource(id = R.string.missing_field),
+                                    message = exception.errorMessage,
+                                    onDismiss = {
+//                                        if (itemToAdd != null && !isAddDialogOpen.value) isAddDialogOpen.value = true
+//                                        else if (itemToEdit != null && !isEditDialogOpen.value) isEditDialogOpen.value = true
+
+                                        viewModel.dismissError()
+
+                                    })
+                            }
+
+                            is NoFileFoundException -> {
+                                NotificationDialog(title = "Result",
+                                    message = exception.message
+                                        ?: return@AnimatedVisibility,
+                                    onDismiss = {
+                                        viewModel.dismissError()
+                                    })
+                            }
+
+                            is EmptyContentException -> {
+                                NotificationDialog(title = "Message",
+                                    message = exception.message
+                                        ?: return@AnimatedVisibility,
+                                    onDismiss = {
+                                        viewModel.dismissError()
+                                    })
+                            }
+
+                            is SecurityException -> {
+                                PermissionRequestDialog(
+                                    uri = exception.message?.substringBefore(" from")
+                                        ?.substringAfter("content://") ?: "", onAuthorize = {
+
+                                    }, onDismiss = {})
+                            }
+
+                            else -> {
+                                NotificationDialog(title = "Oops.. an error occurred.",
+                                    message = exception?.message
+                                        ?: return@AnimatedVisibility,
+                                    onDismiss = {
+                                        viewModel.dismissError()
+                                    })
+                            }
+                        }
                     }
 
 
@@ -228,10 +235,17 @@ fun MainScreen(viewModel: MainViewModel) {
 
 @Composable
 private fun EmptyContentScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
-        Image(modifier = Modifier.size(620.dp), painter = painterResource(id = R.drawable.ic_launcher_foreground), contentDescription ="App logo.", alpha = 0.02F , contentScale = ContentScale.Fit)
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Image(
+            modifier = Modifier.size(620.dp),
+            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+            contentDescription = "App logo.",
+            alpha = 0.02F,
+            contentScale = ContentScale.Fit
+        )
 
-        Text(text = stringResource(R.string.no_item_created), fontSize = 24.sp) }
+        Text(text = stringResource(R.string.no_item_created), fontSize = 24.sp)
+    }
 }
 
 
@@ -239,7 +253,10 @@ private fun EmptyContentScreen() {
 @Composable
 private fun TopBarLayout() {
     TopAppBar(title = {
-        Image(painter = painterResource(id = R.drawable.ic_launcher_foreground), contentDescription = "App logo")
+        Image(
+            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+            contentDescription = "App logo"
+        )
     }, backgroundColor = colorResource(R.color.lavender_blush), elevation = 2.dp)
 }
 

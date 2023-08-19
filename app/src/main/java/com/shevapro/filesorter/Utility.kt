@@ -5,11 +5,11 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
-import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.MutableState
+import com.shevapro.filesorter.ui.getActivity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
@@ -43,8 +43,8 @@ object Utility {
         context: Context
     ) {
 
-        grantPermissionForUri(context, sourceFileUri)
-        grantPermissionForUri(context, destinationFolderUri)
+        if (sourceFileUri != Uri.EMPTY)  grantPermissionForUri(context, sourceFileUri)
+        if (destinationFolderUri != Uri.EMPTY)  grantPermissionForUri(context, destinationFolderUri)
     }
 
     private fun grantPermissionForUri(
@@ -53,9 +53,9 @@ object Utility {
     ) {
         val takeFlags =
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-        context.getActivity()?.also {
-            it.grantUriPermission(context.packageName, sourceFileUri, takeFlags)
-            it.contentResolver?.takePersistableUriPermission(sourceFileUri, takeFlags)
+        context.getActivity()?.apply {
+            grantUriPermission(context.packageName, sourceFileUri, takeFlags)
+            contentResolver?.takePersistableUriPermission(sourceFileUri, takeFlags)
 
         }
     }
@@ -69,14 +69,14 @@ object Utility {
                     addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
                     addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    println("Utility-> flags granted")
                 }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && input != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, input)
-
-
             }
+
+
+
 
 
             return intent

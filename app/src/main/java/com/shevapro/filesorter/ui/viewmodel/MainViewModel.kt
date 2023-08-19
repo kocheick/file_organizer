@@ -6,13 +6,14 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.*
 import com.shevapro.filesorter.data.repository.Repository
+import com.shevapro.filesorter.model.AppStatistic
 import com.shevapro.filesorter.model.EmptyContentException
 import com.shevapro.filesorter.model.MissingFieldException
 import com.shevapro.filesorter.model.UITaskRecord
 import com.shevapro.filesorter.model.UiState
 import com.shevapro.filesorter.service.FileMover
-import com.shevapro.filesorter.TaskRecord
-import com.shevapro.filesorter.TaskRecord.Companion.EMPTY_ITEM
+import com.shevapro.filesorter.model.TaskRecord
+import com.shevapro.filesorter.model.TaskRecord.Companion.EMPTY_ITEM
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
@@ -48,8 +49,8 @@ class MainViewModel(
 //        _hasError.value = true
 
 
+        println("your failed proof ${exception.cause}")
         _state.value = UiState.Data(_tasks.map { it.toUITaskRecord() }, exception)
-        println(exception.message)
 
 
     }
@@ -72,6 +73,11 @@ class MainViewModel(
     private var _isEditDialogpOpen: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isEditDialogpOpen = _isEditDialogpOpen
         .asStateFlow()
+
+    private var _appStats: MutableStateFlow<AppStatistic> = MutableStateFlow(AppStatistic())
+
+    val appStats = _appStats.asStateFlow()
+
 
     init {
         wtihBlankSamples()
@@ -211,7 +217,7 @@ class MainViewModel(
         viewModelScope.launch(IO + coroutineExceptionHandler) { repository.deleteAll() }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    fun processTasks() {
+    fun sortFiles() {
         _state.value = UiState.Loading
 
         viewModelScope.launch(IO + coroutineExceptionHandler) {
@@ -226,7 +232,8 @@ class MainViewModel(
                     fileMover.moveFilesByType(
                         task.source,
                         task.destination,
-                        task.extension.lowercase().trim(), context = app
+                        task.extension.lowercase().trim(), context = app,
+                        {progress -> _state.value = UiState.Processing(progress)}
                     )
 
 //                    fileMover.moveFilesWithExtension(

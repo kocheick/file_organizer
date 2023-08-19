@@ -1,11 +1,12 @@
-package com.shevapro.filesorter
+package com.shevapro.filesorter.ui
 
 import android.content.Context
 import android.content.ContextWrapper
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import com.shevapro.filesorter.ui.MainScreen
+import com.shevapro.filesorter.App
+import com.shevapro.filesorter.ui.components.MainScreen
 import com.shevapro.filesorter.ui.viewmodel.MainViewModel
 
 class MainActivity : AppCompatActivity() {

@@ -1,7 +1,7 @@
 package com.shevapro.filesorter.data.database
 
 import androidx.room.*
-import com.shevapro.filesorter.TaskRecord
+import com.shevapro.filesorter.model.TaskRecord
 import kotlinx.coroutines.flow.Flow
 
 @Dao

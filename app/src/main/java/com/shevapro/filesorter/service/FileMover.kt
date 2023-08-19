@@ -5,9 +5,11 @@ import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.shevapro.filesorter.Utility.grantUrisPermissions
+import com.shevapro.filesorter.model.EmptyContentException
+import com.shevapro.filesorter.model.TaskStats
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import java.io.*
 
 class FileMover private constructor() {
 
@@ -20,9 +22,11 @@ class FileMover private constructor() {
         source: String,
         destination: String,
         extension: String,
-        context: Context
+        context: Context,
+        moveProgress: (TaskStats) -> Unit = {}
+
     ) {
-        try {
+//        try {
             println("getting folder")
 
             val (sourceFolder, destinationFolder) = getFoldersAsDocumentFiles(
@@ -35,15 +39,17 @@ class FileMover private constructor() {
                 .filter { file -> file.isFile && file.name?.endsWith(extension) == true }
             println("moving files")
 
-            moveFiles(filesToMove, destinationFolder, context.contentResolver)
-        } catch (exception: Exception) {
-            if (exception is IOException) {
-                val partialUrlString = exception.message?.substringAfter("content://")
-                val uriString = "content://$partialUrlString"
-                val uri = Uri.parse(uriString)
-                askPermissionForUri(uri)
-            }
-        }
+            moveFiles(
+                filesToMove, destinationFolder, context.contentResolver, moveProgress,{ grantUrisPermissions(it,context = context) }
+            )
+//        } catch (exception: Exception) {
+//            if (exception is IOException) {
+//                val partialUrlString = exception.message?.substringAfter("content://")
+//                val uriString = "content://$partialUrlString"
+//                val uri = Uri.parse(uriString)
+//                askPermissionForUri(uri)
+//            }
+//        }
     }
 
     fun askPermissionForUri(uri: Uri) {
@@ -72,36 +78,64 @@ class FileMover private constructor() {
     private suspend fun moveFiles(
         filesToMove: List<DocumentFile>,
         destinationFolder: DocumentFile,
-        contentResolver: ContentResolver,
+        contentResolver:ContentResolver,
+        shareStats: (TaskStats) -> Unit = {},
+        retryCallback: (Uri) -> Unit = {}
     ) {
         if (filesToMove.isNotEmpty()) {
+            val total = filesToMove.size
 
-            filesToMove.forEach { file ->
-                println("Your files to be moves ${file.name} ...")
+            var stats = TaskStats(total,0,"")
+            filesToMove.forEachIndexed { index,  file ->
+
+println("moving ${file.name} progres should be $index")
                 withContext(IO) {
 
-                    val destinationFile =
-                        destinationFolder.createFile(file.type ?: "*/*", file.name!!)
-                            ?: throw IOException("Failed to create new file in destination folder. ${file.uri}")
 
-                    contentResolver.openOutputStream(destinationFile.uri)?.use { outputStream ->
-                        contentResolver.openInputStream(file.uri)?.use { inputStream ->
-                            inputStream.copyTo(outputStream)
+
+//                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) DocumentsContract.moveDocument(
+//                            contentResolver, file.uri,
+//                            file.parentFile!!.uri, destinationFolder.uri
+//                        )
+//                    else {
+                        val destinationFile =
+                            destinationFolder.createFile(file.type ?: "*/*", file.name!!)
+//                                ?: throw Exception("Failed to create new file in destination folder. ${file.uri}")
+
+                        if (destinationFile != null) {
+                            stats = stats.copy(numberOfFilesMoved =index, currentFileName = file.name!!)
+
+                            contentResolver.openOutputStream(destinationFile.uri)
+                                ?.use { outputStream ->
+                                    contentResolver.openInputStream(file.uri)?.use { inputStream ->
+                                        inputStream.copyTo(outputStream)
+                                    }
+                                        ?: throw Exception("An error occured while copying file ${file.name} into destination folder. ${file.uri}")
+                                }
+                                ?: throw Exception("An error occured while copying file ${file.name} from source folder. ${file.uri}")
+
+                            // Delete the original file
+                            if (!file.delete()) {
+                                throw Exception("Failed to delete original from source folder. ${file.uri}")
+                            }
+                            shareStats(stats)
+
+                        } else {
+                            retryCallback(file.uri)
                         }
-                            ?: throw IOException("An error occured while copying file ${file.name} into destination folder. ${file.uri}")
-                    }
-                        ?: throw IOException("An error occured while copying file ${file.name} from source folder. ${file.uri}")
 
-                    // Delete the original file
-                    if (!file.delete()) {
-                        throw IOException("Failed to delete original from source folder. ${file.uri}")
-                    }
+
+
+                    delay(1200)
                 }
+
             }
 
 
         } else {
             println("No file file with extension found")
+            throw EmptyContentException("")
         }
     }
 

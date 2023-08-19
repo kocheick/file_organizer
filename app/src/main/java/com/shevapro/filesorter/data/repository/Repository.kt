@@ -1,6 +1,6 @@
 package com.shevapro.filesorter.data.repository
 
-import com.shevapro.filesorter.TaskRecord
+import com.shevapro.filesorter.model.TaskRecord
 import kotlinx.coroutines.flow.Flow
 
 interface Repository {

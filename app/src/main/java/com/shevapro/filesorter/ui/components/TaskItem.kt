@@ -1,4 +1,4 @@
-package com.shevapro.filesorter
+package com.shevapro.filesorter.ui.components
 
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.shevapro.filesorter.R
 import com.shevapro.filesorter.Utility.formatUriToUIString
 import com.shevapro.filesorter.model.UITaskRecord
 

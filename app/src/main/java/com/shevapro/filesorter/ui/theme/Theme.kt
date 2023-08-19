@@ -8,14 +8,14 @@ import androidx.compose.ui.graphics.Color
 import com.shevapro.filesorter.R
 
 
-private val AppThemeLight = lightColors(
+ val AppThemeLight = lightColors(
     primary = lavender_blush, primaryVariant = fiery_rose,
     onPrimary = Color.Black,
     onSecondary = Color.White,
     secondary = raisin_black, secondaryVariant = jet
 )
 
-private val AppThemeDark = darkColors(
+ val AppThemeDark = darkColors(
     primary = Color(R.color.design_default_color_primary_dark),
     secondary = Color(R.color.design_default_color_secondary),
     onSecondary = Color(R.color.design_default_color_on_secondary),

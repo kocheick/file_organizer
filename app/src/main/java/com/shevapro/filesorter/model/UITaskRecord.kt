@@ -1,7 +1,5 @@
 package com.shevapro.filesorter.model
 
-import com.shevapro.filesorter.TaskRecord
-
 
 data class UITaskRecord(
     val extension: String,
