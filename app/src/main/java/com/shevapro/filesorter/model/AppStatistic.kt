@@ -2,12 +2,14 @@ package com.shevapro.filesorter.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.TypeConverter
+import java.util.Date
 
 data class AppStatistic(
-    val numberOfFileMoved: Int = 0,
+    val totalFilesMoved: Int = 0,
     val MostMovedFileByType: String = "",
-    val frequency: Frequency = Frequency(),
     val mostUsed: MostUsed = MostUsed(),
+    val frequency: Frequency = Frequency(),
     val timeSavedInMinutes: Int = 0
 )
 
@@ -29,10 +31,13 @@ data class TaskStats(
 
 
 @Entity(tableName = "app_stats")
-data class UsageRecords(
-    val numberOfFileMoved: Int = 0,
-    val MostMovedFileByType: String = "",
+data class AppStatisticRecord(
+    val totalFilesMoved: Int = 0,
     val timeSavedInMinutes: Int = 0,
     @PrimaryKey(autoGenerate = true)
     val id: Int
 )
+@Entity(tableName = "move_infos")
+data class MoveStat(
+val source:String, val target:String,val extension:String,val numberOfFileMoved: Int = 0,
+                    val timestamp: Long = System.currentTimeMillis(),    @PrimaryKey(autoGenerate = true )val id:Long =0)

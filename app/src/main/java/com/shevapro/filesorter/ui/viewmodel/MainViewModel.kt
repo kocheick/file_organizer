@@ -5,15 +5,17 @@ import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.*
+import com.shevapro.filesorter.Utility
 import com.shevapro.filesorter.data.repository.Repository
 import com.shevapro.filesorter.model.AppStatistic
 import com.shevapro.filesorter.model.EmptyContentException
 import com.shevapro.filesorter.model.MissingFieldException
+import com.shevapro.filesorter.model.MostUsed
+import com.shevapro.filesorter.model.TaskRecord
+import com.shevapro.filesorter.model.TaskRecord.Companion.EMPTY_ITEM
 import com.shevapro.filesorter.model.UITaskRecord
 import com.shevapro.filesorter.model.UiState
 import com.shevapro.filesorter.service.FileMover
-import com.shevapro.filesorter.model.TaskRecord
-import com.shevapro.filesorter.model.TaskRecord.Companion.EMPTY_ITEM
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
@@ -24,11 +26,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 class MainViewModel(
     private val app: Application,
     private val repository: Repository,
-    private val fileMover: FileMover
+    private val fileMover: FileMover,
 ) :
     AndroidViewModel(app) {
 
@@ -146,6 +149,35 @@ class MainViewModel(
                 _state.value = UiState.Data(t.map { it.toUITaskRecord() })
 
             }
+        }
+
+        viewModelScope.launch {
+
+            fileMover.getStats().stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(), mutableListOf()
+            ).collect { list ->
+                if (list.isNotEmpty()){
+                    var numberOfFilesMoved = 0
+                    var mostMovedFileByType: String = ""
+                    var topSource: String = ""
+                    var topDestination: String = ""
+                    numberOfFilesMoved = list.sumOf { it.numberOfFileMoved }
+                    mostMovedFileByType = list.associateBy { it.extension }.maxBy {it.value.numberOfFileMoved }.key
+                    topSource = list.associateBy { it.source }.maxOf { it.value.source }
+                    topDestination = list.associateBy { it.target }.maxOf { it.value.target }
+
+                    val item = AppStatistic(
+                        numberOfFilesMoved, mostMovedFileByType,
+                        MostUsed(
+                            Utility.formatUriToUIString(
+                                Uri.decode(topSource)), Utility.formatUriToUIString(Uri.decode(topDestination))
+                        ), timeSavedInMinutes = (numberOfFilesMoved * 0.32).roundToInt())
+                    println(item)
+
+                    _appStats.value =  item
+                }
+            }
 
         }
     }
@@ -233,7 +265,7 @@ class MainViewModel(
                         task.source,
                         task.destination,
                         task.extension.lowercase().trim(), context = app,
-                        {progress -> _state.value = UiState.Processing(progress)}
+                        { progress -> _state.value = UiState.Processing(progress) }
                     )
 
 //                    fileMover.moveFilesWithExtension(

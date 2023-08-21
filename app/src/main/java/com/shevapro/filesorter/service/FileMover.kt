@@ -11,11 +11,13 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-class FileMover private constructor() {
+class FileMover private constructor(private val appStatsService: StatsService) {
 
     companion object {
-        fun getInstance(): FileMover = FileMover()
+        fun getInstance(appService: StatsService): FileMover = FileMover(appService)
     }
+
+     fun getStats() = appStatsService.getLatestStats()
 
 
     suspend fun moveFilesByType(
@@ -42,6 +44,10 @@ class FileMover private constructor() {
             moveFiles(
                 filesToMove, destinationFolder, context.contentResolver, moveProgress,{ grantUrisPermissions(it,context = context) }
             )
+
+        appStatsService.insertMoveInfo(source,
+            destination,
+            extension.lowercase().trim(),filesToMove.size)
 //        } catch (exception: Exception) {
 //            if (exception is IOException) {
 //                val partialUrlString = exception.message?.substringAfter("content://")
@@ -51,6 +57,8 @@ class FileMover private constructor() {
 //            }
 //        }
     }
+
+
 
     fun askPermissionForUri(uri: Uri) {
 

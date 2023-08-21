@@ -4,14 +4,16 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.shevapro.filesorter.model.MoveStat
 import com.shevapro.filesorter.model.TaskRecord
 
-@Database(entities = [TaskRecord::class], version = 1, exportSchema = false)
+@Database(entities = [TaskRecord::class,MoveStat::class], version = 2, exportSchema = false)
 //@TypeConverters(UriConverter::class)
 
 abstract class TaskDatabase : RoomDatabase() {
 
     abstract fun taskDao(): TaskDao
+    abstract fun appStats(): StatsDao
 
     companion object {
         private var INSTANCE: TaskDatabase? = null

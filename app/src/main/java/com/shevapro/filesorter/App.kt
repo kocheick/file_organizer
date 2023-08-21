@@ -9,6 +9,7 @@ import com.shevapro.filesorter.data.database.TaskDatabase
 import com.shevapro.filesorter.data.repository.Repository
 import com.shevapro.filesorter.data.repository.RepositoryImpl
 import com.shevapro.filesorter.service.FileMover
+import com.shevapro.filesorter.service.StatsService
 import com.shevapro.filesorter.ui.viewmodel.MainViewModel
 
 class App : Application() {
@@ -23,6 +24,7 @@ class App : Application() {
         lateinit var repository: Repository
 
         lateinit var fileMover: FileMover
+        lateinit var statsService: StatsService
 
         val vmFactory by lazy {
             object : ViewModelProvider.Factory {
@@ -31,7 +33,7 @@ class App : Application() {
                     return MainViewModel(
                         app = instance,
                         repository = repository,
-                        fileMover = fileMover
+                        fileMover = fileMover,
                     ) as T
                 }
             }
@@ -45,14 +47,15 @@ class App : Application() {
         super.onCreate()
         instance = this
 
-        fileMover = FileMover.getInstance()
 
         database = TaskDatabase.getInstance(instance)
 
         dao = database.taskDao()
 
         repository = RepositoryImpl(dao)
+        statsService = StatsService(database.appStats())
 
+        fileMover = FileMover.getInstance(statsService)
         vm = vmFactory.create(MainViewModel::class.java)
     }
 }
