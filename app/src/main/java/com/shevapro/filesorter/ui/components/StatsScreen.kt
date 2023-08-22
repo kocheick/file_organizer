@@ -29,20 +29,20 @@ fun Stats(appStatistic: AppStatistic) {
     Column(
         Modifier
             .wrapContentSize()
-            .padding(16.dp)
+            .padding(12.dp)
             .background(AppThemeLight.primary, RoundedCornerShape(12.dp))
             .border(1.dp, AppThemeLight.secondary, RoundedCornerShape(12.dp)),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(modifier = Modifier.padding(vertical = 8.dp), text = "Quick Stats")
 
-        LazyVerticalGrid(columns = GridCells.Adaptive(128.dp), Modifier.padding(8.dp)) {
+        LazyVerticalGrid(columns = GridCells.Adaptive(150.dp), Modifier.padding(8.dp)) {
 
             item(98879) {
 
                 Column(
                     Modifier
-                        .size(100.dp)
+                        .size(120.dp)
                         .padding(4.dp)
                         .border(1.dp, Color.LightGray, RoundedCornerShape(8.dp)),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -60,7 +60,7 @@ fun Stats(appStatistic: AppStatistic) {
             item(99) {
                 Column(
                     Modifier
-                        .size(100.dp)
+                        .size(120.dp)
                         .padding(4.dp)
                         .border(1.dp, Color.LightGray, RoundedCornerShape(8.dp)),
                     horizontalAlignment = Alignment.Start,
@@ -83,7 +83,7 @@ fun Stats(appStatistic: AppStatistic) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "- " + "Source", fontSize = 10.sp, overflow = TextOverflow.Ellipsis, maxLines = 2)
+                            Text(text = "- " + "Source", fontSize = 10.sp, overflow = TextOverflow.Ellipsis, maxLines = 1)
                             Text(
                                 text = appStatistic.mostUsed.topSourceFolder,
                                 fontSize = 12.sp,
@@ -97,7 +97,7 @@ fun Stats(appStatistic: AppStatistic) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "- " + "Destination", fontSize = 10.sp, overflow = TextOverflow.Ellipsis, maxLines = 2)
+                            Text(text = "- " + "Destination", fontSize = 10.sp, overflow = TextOverflow.Ellipsis, maxLines = 1)
                             Text(
                                 text = appStatistic.mostUsed.topDestinationFolder,
                                 fontSize = 12.sp,
@@ -125,7 +125,7 @@ fun Stats(appStatistic: AppStatistic) {
             item(6556) {
                 Column(
                     Modifier
-                        .size(100.dp)
+                        .size(120.dp)
                         .padding(4.dp)
                         .border(1.dp, Color.LightGray, RoundedCornerShape(8.dp)),
                     horizontalAlignment = Alignment.CenterHorizontally,

@@ -1,13 +1,9 @@
 package com.shevapro.filesorter.data.database
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
 import com.shevapro.filesorter.model.MoveStat
-import com.shevapro.filesorter.model.TaskRecord
 import kotlinx.coroutines.flow.Flow
 @Dao
 interface StatsDao {
@@ -27,6 +23,6 @@ interface StatsDao {
 //    suspend fun delete(item: TaskRecord)
 
     @Query("DELETE FROM move_infos")
-    suspend fun deleteAllTodos()
+    suspend fun deleteAll()
 
 }

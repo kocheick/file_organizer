@@ -18,6 +18,7 @@ class FileMover private constructor(private val appStatsService: StatsService) {
     }
 
      fun getStats() = appStatsService.getLatestStats()
+    suspend fun resetStats() = appStatsService.resetStats()
 
 
     suspend fun moveFilesByType(

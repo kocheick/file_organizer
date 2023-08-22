@@ -152,7 +152,7 @@ class MainViewModel(
         }
 
         viewModelScope.launch {
-
+//            fileMover.resetStats()
             fileMover.getStats().stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(), mutableListOf()
@@ -163,9 +163,9 @@ class MainViewModel(
                     var topSource: String = ""
                     var topDestination: String = ""
                     numberOfFilesMoved = list.sumOf { it.numberOfFileMoved }
-                    mostMovedFileByType = list.associateBy { it.extension }.maxBy {it.value.numberOfFileMoved }.key
-                    topSource = list.associateBy { it.source }.maxOf { it.value.source }
-                    topDestination = list.associateBy { it.target }.maxOf { it.value.target }
+                    mostMovedFileByType = list.groupBy { it.extension }.mapValues { it.value.size }.maxBy { it.value }.key
+                    topSource = list.groupBy { it.source }.mapValues { it.value.size }.maxBy { it.value }.key
+                    topDestination = list.groupBy { it.target }.mapValues { it.value.size }.maxBy { it.value }.key
 
                     val item = AppStatistic(
                         numberOfFilesMoved, mostMovedFileByType,
@@ -173,7 +173,7 @@ class MainViewModel(
                             Utility.formatUriToUIString(
                                 Uri.decode(topSource)), Utility.formatUriToUIString(Uri.decode(topDestination))
                         ), timeSavedInMinutes = (numberOfFilesMoved * 0.32).roundToInt())
-                    println(item)
+                    println("FILE TYPE $item")
 
                     _appStats.value =  item
                 }
