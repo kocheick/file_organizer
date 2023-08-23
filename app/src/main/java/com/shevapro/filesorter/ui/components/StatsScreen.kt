@@ -86,7 +86,7 @@ fun Stats(appStatistic: AppStatistic) {
                             Text(text = "- " + "Source", fontSize = 10.sp)
                             Text(
                                 text = appStatistic.mostUsed.topSourceFolder,
-                                fontSize = 12.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium, overflow = TextOverflow.Ellipsis, maxLines = 1
                             )
                         }
@@ -122,7 +122,7 @@ fun Stats(appStatistic: AppStatistic) {
 
                 }
             }
-            item(appStatistic.timeSavedInMinutes) {
+            item(appStatistic.toString()) {
                 Column(
                     Modifier
                         .size(120.dp)
