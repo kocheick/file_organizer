@@ -106,7 +106,7 @@ fun TaskItem(
                         Icon(modifier = Modifier
                             .background(shape = CircleShape, color = Color.Yellow.copy(0.9f))
                             .size(20.dp)
-                            .padding(2.dp)
+                            .padding(2.dp).border(1.dp,Color.Red,CircleShape)
 //                        color = colorResource(R.color.middle_blue_green).copy(0.4f)
                         ,
                             imageVector = Icons.Outlined.AddAlert,
