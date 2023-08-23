@@ -172,7 +172,7 @@ class MainViewModel(
                         MostUsed(
                             Utility.formatUriToUIString(
                                 Uri.decode(topSource)), Utility.formatUriToUIString(Uri.decode(topDestination))
-                        ), timeSavedInMinutes = (numberOfFilesMoved * 0.32).roundToInt())
+                        ), timeSavedInMinutes = (numberOfFilesMoved * 0.42).roundToInt())
                     println("FILE TYPE $item")
 
                     _appStats.value =  item
