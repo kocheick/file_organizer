@@ -123,7 +123,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                         onSaveUpdates = { viewModel.onUpdateItemToEdit(it) },
                                         onDismiss = {
                                             viewModel.closeEditDialog()
-                                        })
+                                        }, onReadErrorMessageForTask = {viewModel.dissmissErrorMessageForTask(it)})
                                 }
 
                                 if (isRemovalDialogOpen.value && itemToRemove != null) AnimatedVisibility(

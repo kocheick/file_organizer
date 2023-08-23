@@ -2,6 +2,7 @@ package com.shevapro.filesorter
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -11,12 +12,15 @@ import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
 import com.shevapro.filesorter.ui.getActivity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import java.security.Permission
 
 object Utility {
     const val MATCH_2_CHARS_AFTER_SIGN = "%[\\dA-Za-z]{2}"
+    const val AVERAGE_MANUAL_FILE_MOVE_PER_SECOND = 0.42
     fun swapPaths(sourcePath: MutableState<String>, destPath: MutableState<String>) {
         val temp = sourcePath.value
         sourcePath.value = destPath.value
@@ -52,6 +56,25 @@ object Utility {
 
     }
 
+    // Check if the app has permission to write to a specific URI
+    fun hasPermission(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val writePermission = ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+            writePermission == PackageManager.PERMISSION_GRANTED
+        } else {
+            val permissionStatus = context.packageManager.checkPermission(
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                context.packageName
+            )
+
+
+            permissionStatus == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
     fun grantUrisPermissions(
         sourceFileUri: Uri = Uri.EMPTY,
         destinationFolderUri: Uri = Uri.EMPTY,
@@ -79,7 +102,8 @@ object Utility {
 
         // Calculate the hue using the golden ratio / 2
         val goldenRatio = 0.618033988749895 / 2
-        val hue = ((hash * goldenRatio) % 1.0f).toFloat() // Keep hue value between 0 and 1
+        val hue = ((hash * goldenRatio) %0.8f).toFloat() // Keep hue value between 0 and 1
+//        val hue = ((hash * goldenRatio) % 1.0f).toFloat() // Keep hue value between 0 and 1
         val saturation = 0.45f // Adjust as needed
         val lightness = 0.85f // Adjust as needed
 

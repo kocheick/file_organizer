@@ -4,8 +4,10 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
+import com.shevapro.filesorter.Utility
 import com.shevapro.filesorter.Utility.grantUrisPermissions
 import com.shevapro.filesorter.model.EmptyContentException
+import com.shevapro.filesorter.model.PermissionExceptionForUri
 import com.shevapro.filesorter.model.TaskStats
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
@@ -37,13 +39,21 @@ class FileMover private constructor(private val appStatsService: StatsService) {
                 destination,
                 context
             )
-            println("getting files to move")
+            println("getting files ending in $extension")
             val filesToMove = sourceFolder.listFiles()
                 .filter { file -> file.isFile && file.name?.endsWith(extension) == true }
+                .onEach {
+                    grantUrisPermissions(it.uri,context = context)
+                    val hasPermission = Utility.hasPermission(context)
+                    println("Do we have permission $hasPermission")
+                    if (!hasPermission){
+                        throw PermissionExceptionForUri(it.uri,"Permission needed for this move")
+                    }
+                }
             println("moving files")
 
             moveFiles(
-                filesToMove, destinationFolder, context.contentResolver, moveProgress,{ grantUrisPermissions(it,context = context) }
+                filesToMove, destinationFolder, context.contentResolver, moveProgress,{ grantUrisPermissions(it,context = context) },
             )
 
         appStatsService.insertMoveInfo(source,
@@ -89,7 +99,7 @@ class FileMover private constructor(private val appStatsService: StatsService) {
         destinationFolder: DocumentFile,
         contentResolver:ContentResolver,
         shareStats: (TaskStats) -> Unit = {},
-        retryCallback: (Uri) -> Unit = {}
+        retryCallback: (Uri) -> Unit = {},
     ) {
         if (filesToMove.isNotEmpty()) {
             val total = filesToMove.size
@@ -113,7 +123,10 @@ println("moving ${file.name} progres should be $index")
 //                                ?: throw Exception("Failed to create new file in destination folder. ${file.uri}")
 
                         if (destinationFile != null) {
-                            stats = stats.copy(numberOfFilesMoved =index, currentFileName = file.name!!)
+                            stats = stats.copy(
+                                numberOfFilesMoved = index,
+                                currentFileName = file.name!!
+                            )
 
                             contentResolver.openOutputStream(destinationFile.uri)
                                 ?.use { outputStream ->
@@ -136,7 +149,8 @@ println("moving ${file.name} progres should be $index")
 
 
 
-                    delay(1200)
+                        delay(1200)
+
                 }
 
             }

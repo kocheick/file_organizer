@@ -1,6 +1,6 @@
 package com.shevapro.filesorter.ui.components
 
-import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -22,8 +23,10 @@ import androidx.compose.material.Checkbox
 import androidx.compose.material.CheckboxDefaults
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddAlert
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
@@ -94,6 +97,24 @@ fun TaskItem(
 //                        color = colorResource(R.color.middle_blue_green).copy(0.4f)
                     )
             ) {
+                androidx.compose.animation.AnimatedVisibility( !task.errorMessage.isNullOrEmpty(),
+                    modifier = Modifier.wrapContentSize()
+                    .align(Alignment.TopEnd)
+//                        .padding(bottom = 16.dp)
+                ) {
+
+                        Icon(modifier = Modifier
+                            .background(shape = CircleShape, color = Color.Yellow.copy(0.9f))
+                            .size(20.dp)
+                            .padding(2.dp)
+//                        color = colorResource(R.color.middle_blue_green).copy(0.4f)
+                        ,
+                            imageVector = Icons.Outlined.AddAlert,
+                            tint = Color.Red,
+                            contentDescription = "alert for error message",
+                        )
+
+                }
                 Text(
                     task.extension,
                     modifier = Modifier.align(Alignment.Center),
@@ -172,7 +193,7 @@ private fun FolderPath(source: String, path: String) {
 //    } else destination.replaceFirst("/tree","Root")
 
 
-    val formattedPath =formatUriToUIString(path)
+    val formattedPath = formatUriToUIString(path)
 
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -188,7 +209,13 @@ private fun FolderPath(source: String, path: String) {
             " : ", color = colorResource(R.color.jet),
             modifier = Modifier.padding(horizontal = 1.dp)
         )
-        Text(formattedPath, color = colorResource(R.color.jet), maxLines = 1, fontSize = 14.sp, overflow = TextOverflow.Ellipsis)
+        Text(
+            formattedPath,
+            color = colorResource(R.color.jet),
+            maxLines = 1,
+            fontSize = 14.sp,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 
 

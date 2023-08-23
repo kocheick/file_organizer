@@ -6,11 +6,13 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.*
 import com.shevapro.filesorter.Utility
+import com.shevapro.filesorter.Utility.AVERAGE_MANUAL_FILE_MOVE_PER_SECOND
 import com.shevapro.filesorter.data.repository.Repository
 import com.shevapro.filesorter.model.AppStatistic
 import com.shevapro.filesorter.model.EmptyContentException
 import com.shevapro.filesorter.model.MissingFieldException
 import com.shevapro.filesorter.model.MostUsed
+import com.shevapro.filesorter.model.PermissionExceptionForUri
 import com.shevapro.filesorter.model.TaskRecord
 import com.shevapro.filesorter.model.TaskRecord.Companion.EMPTY_ITEM
 import com.shevapro.filesorter.model.UITaskRecord
@@ -52,6 +54,7 @@ class MainViewModel(
 //        _hasError.value = true
 
 
+
         println("your failed proof ${exception.cause}")
         _state.value = UiState.Data(_tasks.map { it.toUITaskRecord() }, exception)
 
@@ -84,7 +87,7 @@ class MainViewModel(
 
     init {
         wtihBlankSamples()
-        initTasks()
+        initMainScreen()
 
     }
 
@@ -133,7 +136,7 @@ class MainViewModel(
         _itemToRemove.value = item
     }
 
-    private fun initTasks() {
+    private fun initMainScreen() {
         _state.value = UiState.Loading
         viewModelScope.launch(Dispatchers.Unconfined + coroutineExceptionHandler) {
             //  for (i in  samples) addTask(i)
@@ -158,22 +161,18 @@ class MainViewModel(
                 SharingStarted.WhileSubscribed(), mutableListOf()
             ).collect { list ->
                 if (list.isNotEmpty()){
-                    var numberOfFilesMoved = 0
-                    var mostMovedFileByType: String = ""
-                    var topSource: String = ""
-                    var topDestination: String = ""
-                    numberOfFilesMoved = list.sumOf { it.numberOfFileMoved }
-                    mostMovedFileByType = list.groupBy { it.extension }.mapValues { it.value.size }.maxBy { it.value }.key
-                    topSource = list.groupBy { it.source }.mapValues { it.value.size }.maxBy { it.value }.key
-                    topDestination = list.groupBy { it.target }.mapValues { it.value.size }.maxBy { it.value }.key
+                    val numberOfFilesMoved = list.sumOf { it.numberOfFileMoved }
+                    val mostMovedFileByType: String = list.groupBy { it.extension }.mapValues { it.value.size }.maxBy { it.value }.key
+                    val topSource: String = list.groupBy { it.source }.mapValues { it.value.size }.maxBy { it.value }.key
+                    val topDestination: String = list.groupBy { it.target }.mapValues { it.value.size }.maxBy { it.value }.key
 
+val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND).roundToInt()
                     val item = AppStatistic(
                         numberOfFilesMoved, mostMovedFileByType,
                         MostUsed(
                             Utility.formatUriToUIString(
                                 Uri.decode(topSource)), Utility.formatUriToUIString(Uri.decode(topDestination))
-                        ), timeSavedInMinutes = (numberOfFilesMoved * 0.42).roundToInt())
-                    println("FILE TYPE $item")
+                        ), timeSavedInMinutes = approxTimeSaved )
 
                     _appStats.value =  item
                 }
@@ -253,7 +252,7 @@ class MainViewModel(
         _state.value = UiState.Loading
 
         viewModelScope.launch(IO + coroutineExceptionHandler) {
-            val items = _tasks.filter { it.isActive }
+            val items = _tasks.filter { it.isActive && it.errorMessage.isNullOrEmpty() }
             println("VIEWMODEL : action processing ${items.size} items")
 
             if (items.isNotEmpty()) {
@@ -261,12 +260,20 @@ class MainViewModel(
 
                 items.forEach { task ->
                     println("VIEWMODEL : processing with ext ${task.extension}")
-                    fileMover.moveFilesByType(
-                        task.source,
-                        task.destination,
-                        task.extension.lowercase().trim(), context = app,
-                        { progress -> _state.value = UiState.Processing(progress) }
-                    )
+                    try {
+                        fileMover.moveFilesByType(
+                            task.source,
+                            task.destination,
+                            task.extension.lowercase().trim(), context = app,
+                            { progress -> _state.value = UiState.Processing(progress) },
+
+                            )
+                    } catch (e:PermissionExceptionForUri){
+                        viewModelScope.launch{ repository.updateTask(task.copy(errorMessage = e.message)) }
+                        sortFiles()
+                    }
+
+
 
 //                    fileMover.moveFilesWithExtension(
 //                        Uri.parse(task.source),
@@ -287,9 +294,9 @@ class MainViewModel(
 //                            fileMover.moveFile(it, task.to)
 //                        }
 //                    }
-                }
-                _state.value = UiState.Data(_tasks.map { it.toUITaskRecord() }, null)
 
+                    _state.value = UiState.Data(_tasks.map { it.toUITaskRecord() }, null)
+                }
             } else {
 
                 println("VIEWMODEL : list is empty")
@@ -305,6 +312,12 @@ class MainViewModel(
                 itemToBeToggled.toTaskRecord().copy(isActive = !itemToBeToggled.isActive)
             )
         }
+    }
+
+    fun dissmissErrorMessageForTask(id: Int) = viewModelScope.launch(IO+coroutineExceptionHandler) {
+        val item = _tasks.first { it.id == id }.copy(errorMessage = null)
+        _itemToEdit.value = item.toUITaskRecord()
+        repository.updateTask(item)
     }
 
 

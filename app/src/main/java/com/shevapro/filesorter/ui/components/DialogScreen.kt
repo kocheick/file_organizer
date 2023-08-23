@@ -17,11 +17,14 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -34,10 +37,12 @@ import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Icon
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddAlert
 import androidx.compose.material.icons.rounded.DoubleArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -54,6 +59,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
@@ -160,12 +166,13 @@ fun EditTaskDialog(
     itemToBeEdited: UITaskRecord,
     onUpdateItem: (UITaskRecord) -> Unit,
     onSaveUpdates: (UITaskRecord?) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onReadErrorMessageForTask:(Int)->Unit ={}
 ) {
 
     var extension = itemToBeEdited.extension
-    var source = itemToBeEdited.extension
-    var destination = itemToBeEdited.extension
+    var source = itemToBeEdited.source
+    var destination = itemToBeEdited.destination
 
 
     AlertDialog(onDismissRequest = {
@@ -174,44 +181,87 @@ fun EditTaskDialog(
         title = { Text("Edit item".uppercase()) },
         //alert dialog content/body goes in here
         text = {
-            TaskForm(
-                onSourceUriChange = {
-                    source = it
-                    onSaveUpdates(
-                        itemToBeEdited.copy(
-                            extension = extension, source = source,
-                            destination
-                            = destination,
-                        )
-                    )
 
-                },
-                onDestinationUriChange = {
-                    destination = it
-                    onSaveUpdates(
-                        itemToBeEdited.copy(
-                            extension = extension, source = source,
-                            destination
-                            = destination,
+            Column{
+                itemToBeEdited.errorMessage?.let {
+                    Button(modifier = Modifier
+                        .padding(6.dp)
+                        .wrapContentSize()
+                        .border(4.dp, Color.LightGray, MaterialTheme.shapes.small)
+                        ,
+                        onClick = { onReadErrorMessageForTask(itemToBeEdited.id) }) {
+                        Column(
+
                         )
-                    )
-                },
-                taskToBeEdited = itemToBeEdited,
-                onTypeChange = {
-                    extension = it
-                    onSaveUpdates(
-                        itemToBeEdited.copy(
-                            extension = extension, source = source,
-                            destination
-                            = destination,
-                        )
-                    )
-                },
-                extensionLabelText = stringResource(
-                    id = R.string.update_file_extension_or_type_current_is,
-                    itemToBeEdited.extension.uppercase()
+                        {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Outlined.AddAlert,
+                                    contentDescription = "error message"
+                                )
+                                Text(
+                                    maxLines = 1,
+                                    text = "Attention ", fontWeight = FontWeight.Normal,
+                                    fontSize = 14.sp
+                                )
+
+                            }
+                            Text(
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 3,
+                                text = it,
+                                overflow = TextOverflow.Ellipsis,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(
+                    modifier = Modifier
+                        .height(2.dp)
+                        .fillMaxWidth()
+                        .padding(10.dp)
                 )
-            )
+                TaskForm(
+                    onSourceUriChange = {
+                        source = it
+                        onSaveUpdates(
+                            itemToBeEdited.copy(
+                                extension = extension, source = source,
+                                destination
+                                = destination,
+                            )
+                        )
+
+                    },
+                    onDestinationUriChange = {
+                        destination = it
+                        onSaveUpdates(
+                            itemToBeEdited.copy(
+                                extension = extension, source = source,
+                                destination
+                                = destination,
+                            )
+                        )
+                    },
+                    taskToBeEdited = itemToBeEdited,
+                    onTypeChange = {
+                        extension = it
+                        onSaveUpdates(
+                            itemToBeEdited.copy(
+                                extension = extension, source = source,
+                                destination
+                                = destination,
+                            )
+                        )
+                    },
+                    extensionLabelText = stringResource(
+                        id = R.string.update_file_extension_or_type_current_is,
+                        itemToBeEdited.extension.uppercase()
+                    )
+                )
+            }
         },
         buttons = {
             CancelAndSaveButtons(onDismiss = {
@@ -425,11 +475,11 @@ fun TaskForm(
 
 
     val formattedSource = Utility.formatUriToUIString(
-            Uri.decode(sourcePath.value) ?: stringResource(R.string.no_folder_selected)
-        )
+        Uri.decode(sourcePath.value) ?: stringResource(R.string.no_folder_selected)
+    )
     val formattedDestination = Utility.formatUriToUIString(
-            Uri.decode(destPath.value) ?: stringResource(R.string.no_folder_selected)
-        )
+        Uri.decode(destPath.value) ?: stringResource(R.string.no_folder_selected)
+    )
 
     val typeTextState = remember { mutableStateOf(TextFieldValue(taskToBeEdited.extension)) }
 
@@ -450,7 +500,7 @@ fun TaskForm(
     }
     val srcLauncher = permissionLauncher(sourceDirectoryPickerLauncher, sourcePath, permissions)
     val destLauncher =
-        permissionLauncher(destinationDirectoryPickerLauncher, destPath,permissions)
+        permissionLauncher(destinationDirectoryPickerLauncher, destPath, permissions)
 
     Column(
         modifier = Modifier
@@ -459,6 +509,8 @@ fun TaskForm(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.SpaceEvenly
     ) {
+
+
 
         Text(
             fontWeight = FontWeight.SemiBold,
@@ -526,20 +578,20 @@ fun TaskForm(
 @Composable
 fun permissionLauncher(
     directoryPickerLauncher: ManagedActivityResultLauncher<Uri?, Uri?>,
-    sourcePath: MutableState<String?>, permissions : List<String>
+    sourcePath: MutableState<String?>, permissions: List<String>
 ): ManagedActivityResultLauncher<Array<String>, Map<String, @JvmSuppressWildcards Boolean>> {
 
-    val permissionState  = rememberMultiplePermissionsState(permissions = permissions)
+    val permissionState = rememberMultiplePermissionsState(permissions = permissions)
 
-    val storageAccessPermissionState  = if (VERSION.SDK_INT >= VERSION_CODES.R) {
-        rememberPermissionState(permission =ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION )
+    val storageAccessPermissionState = if (VERSION.SDK_INT >= VERSION_CODES.R) {
+        rememberPermissionState(permission = ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
     } else {
-        rememberPermissionState(permission = Manifest.permission.WRITE_EXTERNAL_STORAGE )
+        rememberPermissionState(permission = Manifest.permission.WRITE_EXTERNAL_STORAGE)
 
     }
 
 
-    val launcher =  rememberLauncherForActivityResult(
+    val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
         onResult = { permissionMap ->
 
@@ -551,19 +603,21 @@ fun permissionLauncher(
             } else if (permissionState.shouldShowRationale) {
                 println("Permission should show rational")
 
-                permissionState.permissions.forEach {
-                    it.launchPermissionRequest()
-                }
+//                permissionState.permissions.forEach {
+//                    it.launchPermissionRequest()
+//                }
 
             } else {
                 println("Permission not granted")
+                println("revoked : ${permissionState.revokedPermissions}")
                 if (VERSION.SDK_INT >= VERSION_CODES.R) {
-                    when(storageAccessPermissionState.status){
+                    when (storageAccessPermissionState.status) {
                         is PermissionStatus.Granted -> {
                             println("Permission granted here but weird")
 
                             directoryPickerLauncher.launch(sourcePath.value?.toUri())
                         }
+
                         is PermissionStatus.Denied -> {
                             println("Permission denied --> launching perm. request")
 
@@ -572,8 +626,7 @@ fun permissionLauncher(
 
                         }
                     }
-                }
-                else permissionState.launchMultiplePermissionRequest()
+                } else permissionState.launchMultiplePermissionRequest()
 
                 directoryPickerLauncher.launch(sourcePath.value?.toUri())
 
