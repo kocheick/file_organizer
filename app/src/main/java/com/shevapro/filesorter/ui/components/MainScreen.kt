@@ -284,11 +284,13 @@ fun ActionButtons(
     onExecuteTasksClicked: () -> Unit
 ) {
 
-    val processBackgroundColor = remember { Animatable(initialValue = Color.LightGray.copy(0.8f)) }
+    val processBackgroundColor = remember { Animatable(initialValue = Color.LightGray) }
 
     LaunchedEffect(itemCount) {
         if (itemCount > 0) {
-            processBackgroundColor.animateTo(Color(R.color.jet).copy(0.4f))
+            processBackgroundColor.animateTo(Color(0xFF5C6BC0))
+//            processBackgroundColor.animateTo(Color(R.color.jet).copy(0.4f))
+
         } else {
             processBackgroundColor.animateTo(Color.LightGray)
         }
@@ -303,7 +305,7 @@ fun ActionButtons(
             onClick = { onAddNewTaskItem() },
             backgroundColor = colorResource(R.color.fiery_rose)
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "Make a move")
+            Icon(Icons.Filled.Add, contentDescription = "Add New Item")
         }
 
 
@@ -323,8 +325,8 @@ fun ActionButtons(
         ) {
             Icon(
                 Icons.Filled.Done,
-                contentDescription = "Execute",
-                tint = Color.White.copy(0.8f)
+                contentDescription = "start sorting files",
+                tint = Color.White
             )
         }
     }
