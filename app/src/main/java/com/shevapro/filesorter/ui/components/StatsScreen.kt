@@ -38,7 +38,7 @@ fun Stats(appStatistic: AppStatistic) {
 
         LazyVerticalGrid(columns = GridCells.Adaptive(150.dp), Modifier.padding(8.dp)) {
 
-            item(98879) {
+            item(appStatistic.totalFilesMoved) {
 
                 Column(
                     Modifier
@@ -57,7 +57,7 @@ fun Stats(appStatistic: AppStatistic) {
                 }
 
             }
-            item(99) {
+            item(appStatistic.mostUsed.toString()) {
                 Column(
                     Modifier
                         .size(120.dp)
@@ -83,11 +83,11 @@ fun Stats(appStatistic: AppStatistic) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "- " + "Source", fontSize = 10.sp, overflow = TextOverflow.Ellipsis, maxLines = 1)
+                            Text(text = "- " + "Source", fontSize = 10.sp)
                             Text(
                                 text = appStatistic.mostUsed.topSourceFolder,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium, overflow = TextOverflow.Ellipsis, maxLines = 1
                             )
                         }
                         Row(
@@ -97,11 +97,11 @@ fun Stats(appStatistic: AppStatistic) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "- " + "Destination", fontSize = 10.sp, overflow = TextOverflow.Ellipsis, maxLines = 1)
+                            Text(text = "- " + "Destination", fontSize = 10.sp)
                             Text(
                                 text = appStatistic.mostUsed.topDestinationFolder,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium, overflow = TextOverflow.Ellipsis, maxLines = 1
                             )
                         }
                         Row(
@@ -111,18 +111,18 @@ fun Stats(appStatistic: AppStatistic) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "- " + "File Type", fontSize = 10.sp, overflow = TextOverflow.Clip, maxLines = 1)
+                            Text(text = "- " + "File Type", fontSize = 10.sp)
                             Text(
                                 text = appStatistic.MostMovedFileByType,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium, overflow = TextOverflow.Clip, maxLines = 1
                             )
                         }
                     }
 
                 }
             }
-            item(6556) {
+            item(appStatistic.timeSavedInMinutes) {
                 Column(
                     Modifier
                         .size(120.dp)

@@ -424,12 +424,10 @@ fun TaskForm(
         { path -> if (path == null) false else Uri.parse(path).lastPathSegment.equals("primary:") }
 
 
-    val formattedSource =
-        if (isRoot(sourcePath.value)) "Primary Root" else Utility.formatUriToUIString(
+    val formattedSource = Utility.formatUriToUIString(
             Uri.decode(sourcePath.value) ?: stringResource(R.string.no_folder_selected)
         )
-    val formattedDestination =
-        if (isRoot(destPath.value)) "Primary Root" else Utility.formatUriToUIString(
+    val formattedDestination = Utility.formatUriToUIString(
             Uri.decode(destPath.value) ?: stringResource(R.string.no_folder_selected)
         )
 

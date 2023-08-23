@@ -2,6 +2,7 @@ package com.shevapro.filesorter.ui.components
 
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -33,9 +34,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shevapro.filesorter.R
+import com.shevapro.filesorter.Utility
 import com.shevapro.filesorter.Utility.formatUriToUIString
 import com.shevapro.filesorter.model.UITaskRecord
 
@@ -87,7 +90,8 @@ fun TaskItem(
                     .width(8.dp)
                     .background(
                         shape = CircleShape,
-                        color = colorResource(R.color.middle_blue_green).copy(0.4f)
+                        color = Color(Utility.generateGoldenRatioColor(task.extension))
+//                        color = colorResource(R.color.middle_blue_green).copy(0.4f)
                     )
             ) {
                 Text(
@@ -167,14 +171,8 @@ private fun FolderPath(source: String, path: String) {
 //        first + last
 //    } else destination.replaceFirst("/tree","Root")
 
-    val isRoot = Uri.parse(path).lastPathSegment.equals("primary:")
-    val uiString = formatUriToUIString(path)
-    val characterCount = uiString.length
 
-    val formattedPath =
-        if (isRoot) "Primary Root" else if (characterCount > 50) uiString.substringBefore(">") + ">...>" + uiString.substringAfterLast(
-            ">"
-        ) else uiString
+    val formattedPath =formatUriToUIString(path)
 
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -188,9 +186,9 @@ private fun FolderPath(source: String, path: String) {
 
         Text(
             " : ", color = colorResource(R.color.jet),
-            modifier = Modifier.padding(horizontal = 2.dp)
+            modifier = Modifier.padding(horizontal = 1.dp)
         )
-        Text(formattedPath, color = colorResource(R.color.jet), maxLines = 2, fontSize = 14.sp)
+        Text(formattedPath, color = colorResource(R.color.jet), maxLines = 1, fontSize = 14.sp, overflow = TextOverflow.Ellipsis)
     }
 
 

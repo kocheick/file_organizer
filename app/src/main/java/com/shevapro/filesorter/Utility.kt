@@ -2,6 +2,7 @@ package com.shevapro.filesorter
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
@@ -9,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.MutableState
+import androidx.compose.ui.res.stringResource
 import com.shevapro.filesorter.ui.getActivity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -22,7 +24,20 @@ object Utility {
 
     }
 
-    fun formatUriToUIString(uri: String): String = uri.substringAfterLast(":").replace("/", " > ")
+   private val isRoot: (String?) -> Boolean =
+        { path -> if (path == null) false else Uri.parse(path).lastPathSegment.equals("primary:") }
+
+    private fun formatUri(uri: String): String = uri.substringAfterLast(":").replace("/", " > ")
+    fun formatUriToUIString(uri: String): String  {
+        val formatedUri = formatUri(
+            Uri.decode(uri)
+        )
+        val characterCount = formatedUri.length
+
+        return if (isRoot(uri))  "Primary Root"
+         else if (characterCount > 50) formatedUri.substringBefore(">") + ">>>" + formatedUri.substringAfterLast(
+            ">" ) else formatedUri
+    }
 
     val emptyInteractionSource = object : MutableInteractionSource {
         override val interactions: Flow<Interaction>
@@ -59,6 +74,45 @@ object Utility {
 
         }
     }
+    fun generateGoldenRatioColor(input: String): Long {
+        val hash = input.hashCode()
+
+        // Calculate the hue using the golden ratio / 2
+        val goldenRatio = 0.618033988749895 / 2
+        val hue = ((hash * goldenRatio) % 1.0f).toFloat() // Keep hue value between 0 and 1
+        val saturation = 0.45f // Adjust as needed
+        val lightness = 0.85f // Adjust as needed
+
+        val color = Color.HSVToColor(floatArrayOf(hue * 360.0f, saturation, lightness))
+
+        val red = Color.red(color).toLong()
+        val green = Color.green(color).toLong()
+        val blue = Color.blue(color).toLong()
+
+        val alpha = 255L
+
+        return (alpha shl 24) or (red shl 16) or (green shl 8) or blue
+    }
+     fun generateColorFomInput(input: String): Long {
+        val hash = input.hashCode()
+        val hue = (hash and 0xFF) / 255.0f * 360.0f
+        val saturation = 0.5f // Adjust as needed
+        val lightness = 0.85f // Adjust as needed
+
+//         val saturation = 0.7f // Adjust as needed
+//         val lightness = 0.6f // Adjust as needed
+
+        val color = Color.HSVToColor(floatArrayOf(hue, saturation, lightness))
+
+        val red = Color.red(color).toLong()
+        val green = Color.green(color).toLong()
+        val blue = Color.blue(color).toLong()
+
+        val alpha = 255L
+
+        return (alpha shl 24) or (red shl 16) or (green shl 8) or blue
+    }
+
 
     class OpenDirectoryTree : ActivityResultContracts.OpenDocumentTree() {
         override fun createIntent(context: Context, input: Uri?): Intent {
