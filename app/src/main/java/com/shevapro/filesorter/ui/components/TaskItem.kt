@@ -109,6 +109,7 @@ fun TaskItem(
                             .padding(2.dp)
 //                        color = colorResource(R.color.middle_blue_green).copy(0.4f)
                         ,
+
                             imageVector = Icons.Outlined.AddAlert,
                             tint = Color.Red,
                             contentDescription = "alert for error message",
