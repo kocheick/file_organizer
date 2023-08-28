@@ -104,9 +104,10 @@ fun TaskItem(
                 ) {
 
                         Icon(modifier = Modifier
-                            .background(shape = CircleShape, color = Color.Yellow.copy(0.9f))
+                            .background(shape = CircleShape, color = Color.Yellow.copy(0.8f))
                             .size(20.dp)
-                            .padding(2.dp).border(1.dp,Color.Red,CircleShape)
+                            .border((1).dp,Color.Red,CircleShape)
+                            .padding(2.dp)
 //                        color = colorResource(R.color.middle_blue_green).copy(0.4f)
                         ,
 

@@ -496,7 +496,8 @@ fun TaskForm(
     )
     val permissions = remember {
         if (VERSION.SDK_INT >= VERSION_CODES.R) _permissions.plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-            .plus(MANAGE_EXTERNAL_STORAGE).toList() else _permissions.toList()
+            .plus(MANAGE_EXTERNAL_STORAGE).plus(Manifest.permission.MANAGE_DOCUMENTS).toList().reversed() else _permissions.toList()
+//            .plus(MANAGE_EXTERNAL_STORAGE).toList().reversed() else _permissions.toList()
     }
     val srcLauncher = permissionLauncher(sourceDirectoryPickerLauncher, sourcePath, permissions)
     val destLauncher =
@@ -589,6 +590,8 @@ fun permissionLauncher(
         rememberPermissionState(permission = Manifest.permission.WRITE_EXTERNAL_STORAGE)
 
     }
+    val path =   if (sourcePath.value == stringResource(id = (R.string.no_folder_selected))) Uri.EMPTY else sourcePath.value?.toUri()
+
 
 
     val launcher = rememberLauncherForActivityResult(
@@ -628,7 +631,8 @@ fun permissionLauncher(
                     }
                 } else permissionState.launchMultiplePermissionRequest()
 
-                directoryPickerLauncher.launch(sourcePath.value?.toUri())
+
+                directoryPickerLauncher.launch(path)
 
             }
             println("is it back to granted $areGranted ${permissionMap.values.reduce { acc, next -> acc && next }}")
@@ -728,9 +732,10 @@ fun pickDirectory(pickedUri: (String) -> Unit): ManagedActivityResultLauncher<Ur
     val context = LocalContext.current
 
     val launcher =
-        rememberLauncherForActivityResult(contract = Utility.OpenDirectoryTree()) { result ->
+        rememberLauncherForActivityResult(contract = Utility.OpenDirectory()) { result ->
 
             result?.let {
+//                Intent.createChooser(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE),"")
                 println("your URI path: ${it.path}")
                 println("your URI encoded path: ${it.encodedPath}")
                 println("your URI path fragments: ${it.pathSegments}")

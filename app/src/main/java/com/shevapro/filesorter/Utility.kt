@@ -1,5 +1,6 @@
 package com.shevapro.filesorter
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -7,7 +8,9 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.CallSuper
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.MutableState
@@ -58,21 +61,14 @@ object Utility {
 
     // Check if the app has permission to write to a specific URI
     fun hasPermission(context: Context): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val writePermission = ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-            )
-            writePermission == PackageManager.PERMISSION_GRANTED
-        } else {
-            val permissionStatus = context.packageManager.checkPermission(
+        return context.packageManager.checkPermission(
                 android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 context.packageName
-            )
+            )== PackageManager.PERMISSION_GRANTED
 
 
-            permissionStatus == PackageManager.PERMISSION_GRANTED
-        }
+
+
     }
 
     fun grantUrisPermissions(
@@ -93,7 +89,7 @@ object Utility {
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         context.getActivity()?.apply {
             grantUriPermission(context.packageName, sourceFileUri, takeFlags)
-            contentResolver?.takePersistableUriPermission(sourceFileUri, takeFlags)
+            contentResolver!!.takePersistableUriPermission(sourceFileUri, takeFlags)
 
         }
     }
@@ -113,7 +109,7 @@ object Utility {
         val green = Color.green(color).toLong()
         val blue = Color.blue(color).toLong()
 
-        val alpha = 255L
+        val alpha = 150L
 
         return (alpha shl 24) or (red shl 16) or (green shl 8) or blue
     }
@@ -137,13 +133,43 @@ object Utility {
         return (alpha shl 24) or (red shl 16) or (green shl 8) or blue
     }
 
+    open class OpenDirectory : ActivityResultContract<Uri?, Uri?>() {
+        @CallSuper
+        override fun createIntent(context: Context, input: Uri?): Intent {
+            val intent =
+                Intent(Intent.ACTION_OPEN_DOCUMENT,input).apply {
+//                    type = "*/*"
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    setDataAndType(input,"*/*")
+                }
 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, input)
+            }
+
+            return intent
+        }
+
+        final override fun getSynchronousResult(
+            context: Context,
+            input: Uri?
+        ): SynchronousResult<Uri?>? = null
+
+        final override fun parseResult(resultCode: Int, intent: Intent?): Uri? {
+            return intent.takeIf { resultCode == Activity.RESULT_OK }?.data
+        }
+    }
     class OpenDirectoryTree : ActivityResultContracts.OpenDocumentTree() {
         override fun createIntent(context: Context, input: Uri?): Intent {
             super.createIntent(context, input)
 
             val intent =
-                Intent(Intent.ACTION_OPEN_DOCUMENT_TREE,).apply {
+                (if(input == Uri.EMPTY )Intent(Intent.ACTION_OPEN_DOCUMENT_TREE) else Intent(Intent.ACTION_OPEN_DOCUMENT_TREE,input) )
+                    .apply {
+//                    addCategory(Intent.CATEGORY_OPENABLE)
                     addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
                     addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
