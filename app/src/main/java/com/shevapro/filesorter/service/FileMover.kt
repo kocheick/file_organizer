@@ -1,8 +1,13 @@
 package com.shevapro.filesorter.service
 
 import android.content.ContentResolver
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.FileUtils
+import android.provider.MediaStore
 import androidx.documentfile.provider.DocumentFile
 import com.shevapro.filesorter.Utility
 import com.shevapro.filesorter.Utility.grantUrisPermissions
@@ -12,6 +17,8 @@ import com.shevapro.filesorter.model.TaskStats
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.nio.file.Files
 
 class FileMover private constructor(private val appStatsService: StatsService) {
 
@@ -40,23 +47,22 @@ class FileMover private constructor(private val appStatsService: StatsService) {
                 context
             )
             println("getting files ending in $extension")
-            val filesToMove = sourceFolder.listFiles()
-                .filter { file -> file.isFile && file.name?.endsWith(extension) == true }
-                .onEach {
-                    grantUrisPermissions(it.uri,context = context)
-                    val hasPermission = Utility.hasPermission(context)
-                    println("Do we have permission $hasPermission")
-                    if (!hasPermission){
-                        throw PermissionExceptionForUri(it.uri,"Permission needed for this move")
-                    }
-                }
+            val filesToMove = getFilesToMove(sourceFolder, extension)
+//                .onEach {
+//                    grantUrisPermissions(it.uri,context = context)
+//                    val hasPermission = Utility.hasPermission(context)
+//                    println("Do we have permission $hasPermission")
+//                    if (!hasPermission){
+//                        throw PermissionExceptionForUri(it.uri,"Permission needed for this move")
+//                    }
+//                }
             println("moving files")
 
             moveFiles(
                 filesToMove, destinationFolder, context.contentResolver, moveProgress,{ grantUrisPermissions(it,context = context) },
             )
 
-        appStatsService.insertMoveInfo(source,
+        appStatsService.logTaskDetails(source,
             destination,
             extension.lowercase().trim(),filesToMove.size)
 //        } catch (exception: Exception) {
@@ -69,6 +75,12 @@ class FileMover private constructor(private val appStatsService: StatsService) {
 //        }
     }
 
+    private fun getFilesToMove(
+        sourceFolder: DocumentFile,
+        extension: String
+    ) = sourceFolder
+        .listFiles()
+        .filter { file -> file.isFile && file.name?.endsWith(extension) == true }
 
 
     fun askPermissionForUri(uri: Uri) {
@@ -161,7 +173,70 @@ println("moving ${file.name} progres should be $index")
             throw EmptyContentException("")
         }
     }
+    suspend fun moveFilesWithExtension(context: Context,
+                                       sourceDirectory: Uri,
+                                       targetDirectory: Uri,extension: String) {
+        val selection = "${MediaStore.Files.FileColumns.MIME_TYPE} LIKE ?"
+        val selectionArgs = arrayOf("%.$extension")
 
+        val queryUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            } else {
+                MediaStore.Files.getContentUri("external")
+            }
+        val projection = arrayOf(
+            MediaStore.Files.FileColumns._ID,
+            MediaStore.Files.FileColumns.DATA,
+            MediaStore.Files.FileColumns.DISPLAY_NAME,
+//            MediaStore.Files.FileColumns.SIZE,
+//            MediaStore.Files.FileColumns.DATA,
+//            MediaStore.Files.FileColumns.DISPLAY_NAME,
+//            MediaStore.Files.FileColumns.SIZE,
+            )
+        println("getting cursor")
+
+        val cursor = context.contentResolver.query(
+            sourceDirectory,
+            projection,
+            selection,
+            selectionArgs,
+            null
+        )
+        println("going thru files...${queryUri.path}")
+
+
+       cursor?.use {
+            println("cursor not null ${cursor.count}")
+            while (it.moveToNext()) {
+            println("cursor   ${cursor.count}")
+                val idColumnIndex = it.getColumnIndex(MediaStore.Files.FileColumns._ID)
+                val displayNameColumnIndex = it.getColumnIndex(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                val sizeColumnIndex = it.getColumnIndex(MediaStore.Files.FileColumns.SIZE)
+                val filePathColumnIndex = it.getColumnIndex(MediaStore.Files.FileColumns.DATA)
+                val fileId = it.getLong(idColumnIndex)
+                val filePath = it.getString(filePathColumnIndex)
+                val fileName = it.getString(displayNameColumnIndex)
+                val fileSize = it.getInt(sizeColumnIndex)
+
+                println("moving file $fileName weight $fileSize at $filePath")
+                // Create a new file path in the target directory
+                val newFilePath = "$targetDirectory/${File(filePath).name}"
+
+                // Move the file to the new path
+                val values = ContentValues().apply {
+                    put(MediaStore.Files.FileColumns.DATA, newFilePath)
+                }
+                val updateUri = ContentUris.withAppendedId(queryUri, fileId)
+                context.contentResolver.update(updateUri, values, null, null)
+
+                // Rename the physical file on the file system
+                val sourceFile = File(filePath)
+                val targetFile = File(newFilePath)
+                sourceFile.renameTo(targetFile)
+            }
+            cursor.close()
+        }
+    }
 
 //    fun getFilesWithExtension(uri: Uri, extension: String): List<File> {
 //        val contentResolver = context.contentResolver

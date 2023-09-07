@@ -4,6 +4,7 @@ import android.app.Application
 import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.core.net.toUri
 import androidx.lifecycle.*
 import com.shevapro.filesorter.Utility
 import com.shevapro.filesorter.Utility.AVERAGE_MANUAL_FILE_MOVE_PER_SECOND
@@ -168,11 +169,11 @@ class MainViewModel(
 
 val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND).roundToInt()
                     val item = AppStatistic(
-                        numberOfFilesMoved, mostMovedFileByType,
+                        numberOfFilesMoved,
                         MostUsed(
                             Utility.formatUriToUIString(
                                 Uri.decode(topSource)), Utility.formatUriToUIString(Uri.decode(topDestination))
-                        ), timeSavedInMinutes = approxTimeSaved )
+                        ,mostMovedFileByType), timeSavedInMinutes = approxTimeSaved )
 
                     _appStats.value =  item
                 }
@@ -193,19 +194,19 @@ val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND)
     }
 
     fun addNewItemWith(extension: String, source: String, destination: String) {
+        require(extension.isNotEmpty()) {
+            throw MissingFieldException("Please, verify type input is not empty.")
+        }
+        require(source.isNotEmpty()) {
+            throw MissingFieldException("Please, verify a source folder has been selected.")
+        }
+        require(destination.isNotEmpty()) {
+            throw MissingFieldException("Please, verify a destination folder has been selected.")
+        }
+        closeAddDialog()
         viewModelScope.launch(IO + coroutineExceptionHandler) {
 
-            require(extension.isNotEmpty()) {
-                throw MissingFieldException("Please, verify type input is not empty.")
-            }
-            require(source.isNotEmpty()) {
-                throw MissingFieldException("Please, verify a source folder has been selected.")
-            }
-            require(destination.isNotEmpty()) {
-                throw MissingFieldException("Please, verify a destination folder has been selected.")
-            }
 
-            closeAddDialog()
             repository.addTask(
                 EMPTY_ITEM.copy(
                     extension = extension,
@@ -251,11 +252,11 @@ val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND)
     fun sortFiles() {
         _state.value = UiState.Loading
 
-        viewModelScope.launch(IO + coroutineExceptionHandler) {
             val items = _tasks.filter { it.isActive && it.errorMessage.isNullOrEmpty() }
             println("VIEWMODEL : action processing ${items.size} items")
 
             if (items.isNotEmpty()) {
+                viewModelScope.launch(IO + coroutineExceptionHandler) {
                 delay(DELAY_TIME)
 
                 items.forEach { task ->
@@ -275,7 +276,7 @@ val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND)
 
 
 
-//                    fileMover.moveFilesWithExtension(
+//                    fileMover.moveFilesWithExtension(app,
 //                        Uri.parse(task.source),
 //                        task.destination.toUri(),
 //                        task.extension.lowercase().trim()
@@ -297,11 +298,12 @@ val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND)
 
                     _state.value = UiState.Data(_tasks.map { it.toUITaskRecord() }, null)
                 }
-            } else {
+            }
+        } else {
 
                 println("VIEWMODEL : list is empty")
                 throw EmptyContentException("No item to be processed.")
-            }
+
         }
 //            initTasksΩΩTasks()
     }

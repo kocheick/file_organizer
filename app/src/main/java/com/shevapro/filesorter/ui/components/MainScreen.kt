@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -93,7 +94,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             if (items.isEmpty()) EmptyContentScreen()
                             else {
                                 val isRemovalDialogOpen = rememberSaveable { mutableStateOf(false) }
-                                Column{
+                                Column(Modifier.animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally){
                                     Stats(appStatistic = appStats)
                                     TaskListContent(
                                         tasksList = items,

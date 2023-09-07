@@ -7,7 +7,6 @@ import java.util.Date
 
 data class AppStatistic(
     val totalFilesMoved: Int = 0,
-    val MostMovedFileByType: String = "",
     val mostUsed: MostUsed = MostUsed(),
     val frequency: Frequency = Frequency(),
     val timeSavedInMinutes: Int = 0
@@ -15,7 +14,8 @@ data class AppStatistic(
 
 data class MostUsed(
     val topSourceFolder: String = "",
-    val topDestinationFolder: String = ""
+    val topDestinationFolder: String = "",
+    val topMovedFileByType: String = ""
 )
 
 data class Frequency(val weekly: Int = 0, val monthly: Int = 0) {

@@ -109,8 +109,10 @@ fun Stats(appStatistic: AppStatistic) {
 
                             Text(text = "Top " + "Source", fontSize = 10.sp)
                             Text(
-                                modifier = Modifier.align(Alignment.CenterHorizontally),
-
+//                                modifier = Modifier.align(Alignment.CenterHorizontally),
+                                modifier = Modifier
+                                    .border(1.dp,Color.LightGray, RoundedCornerShape(16.dp))
+                                    .padding(3.dp),
                                 text = appStatistic.mostUsed.topSourceFolder,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
@@ -120,8 +122,10 @@ fun Stats(appStatistic: AppStatistic) {
                             Spacer(Modifier.height(4.dp))
                             Text(text = "Top " + "Destination", fontSize = 10.sp)
                             Text(
-                                modifier = Modifier.align(Alignment.CenterHorizontally),
-
+//                                modifier = Modifier.align(Alignment.CenterHorizontally),
+                                modifier = Modifier
+                                    .border(1.dp,Color.LightGray, RoundedCornerShape(16.dp))
+                                    .padding(3.dp),
                                 text = appStatistic.mostUsed.topDestinationFolder,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
@@ -131,8 +135,11 @@ fun Stats(appStatistic: AppStatistic) {
                             Spacer(Modifier.height(4.dp))
 
                             Text(text = "Top " + "File Type", fontSize = 10.sp)
-                            Text(
-                                text = appStatistic.MostMovedFileByType,
+                            Text(modifier= Modifier
+                                .border(1.dp,Color.LightGray, RoundedCornerShape(16.dp))
+                                .padding(3.dp)
+                                ,
+                                text = appStatistic.mostUsed.topMovedFileByType,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
                                 overflow = TextOverflow.Clip,

@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
+import android.provider.DocumentsContract.Document.MIME_TYPE_DIR
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.CallSuper
@@ -16,6 +17,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
+import androidx.core.net.toFile
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import com.shevapro.filesorter.ui.getActivity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -90,6 +94,7 @@ object Utility {
         context.getActivity()?.apply {
             grantUriPermission(context.packageName, sourceFileUri, takeFlags)
             contentResolver!!.takePersistableUriPermission(sourceFileUri, takeFlags)
+            DocumentFile.fromTreeUri(context,sourceFileUri)!!.uri
 
         }
     }
@@ -135,20 +140,23 @@ object Utility {
 
     open class OpenDirectory : ActivityResultContract<Uri?, Uri?>() {
         @CallSuper
+
         override fun createIntent(context: Context, input: Uri?): Intent {
             val intent =
-                Intent(Intent.ACTION_OPEN_DOCUMENT,input).apply {
+                Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
 //                    type = "*/*"
-                    addCategory(Intent.CATEGORY_OPENABLE)
+//                    addCategory(Intent.CATEGORY_OPENABLE)
+//                    putExtra(Intent.EXTRA_MIME_TYPES, input)
                     addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
                     addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    setDataAndType(input,"*/*")
+//                    setDataAndType(input,MIME_TYPE_DIR)
+
                 }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, input)
-            }
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, input)
+//            }
 
             return intent
         }
@@ -159,6 +167,7 @@ object Utility {
         ): SynchronousResult<Uri?>? = null
 
         final override fun parseResult(resultCode: Int, intent: Intent?): Uri? {
+            println(resultCode)
             return intent.takeIf { resultCode == Activity.RESULT_OK }?.data
         }
     }

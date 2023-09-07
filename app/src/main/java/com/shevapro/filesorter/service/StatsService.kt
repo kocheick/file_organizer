@@ -4,7 +4,7 @@ import com.shevapro.filesorter.data.database.StatsDao
 import com.shevapro.filesorter.model.MoveStat
 
 class StatsService(private val appStats: StatsDao) {
-    suspend fun insertMoveInfo(source: String, destination: String, extension: String, itemQuantity: Int) {
+    suspend fun logTaskDetails(source: String, destination: String, extension: String, itemQuantity: Int) {
             val item = MoveStat(source,destination,extension,itemQuantity)
         appStats.insert(item)
     }

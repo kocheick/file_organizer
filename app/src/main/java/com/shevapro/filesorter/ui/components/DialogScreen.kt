@@ -17,12 +17,14 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -92,8 +94,8 @@ fun AddTaskDialog(
 
     AlertDialog(
         modifier = Modifier
-            .wrapContentSize()
-//            .background(colorResource(id = R.color.fiery_rose),(RoundedCornerShape(8.dp)))
+            .padding(1.dp)
+            .border(0.dp,Color.Unspecified, RoundedCornerShape(12.dp))
         ,
         onDismissRequest = {
             onDismiss()
@@ -104,7 +106,7 @@ fun AddTaskDialog(
                 )
             )
         },
-        title = { Text(stringResource(R.string.add_new_item).uppercase()) },
+        title = { Text(stringResource(R.string.add_item).uppercase()) },
         //alert dialog content/body goes in here
         text = {
             TaskForm(
@@ -175,10 +177,10 @@ fun EditTaskDialog(
     var destination = itemToBeEdited.destination
 
 
-    AlertDialog(onDismissRequest = {
+    AlertDialog(modifier = Modifier.border(1.dp,Color.LightGray, RoundedCornerShape(12.dp)),onDismissRequest = {
         onDismiss()
     },
-        title = { Text("Edit item".uppercase()) },
+        title = { Text("Edit".uppercase()) },
         //alert dialog content/body goes in here
         text = {
 
@@ -186,7 +188,7 @@ fun EditTaskDialog(
                 itemToBeEdited.errorMessage?.let {
                     Button(modifier = Modifier
                         .padding(6.dp)
-                        .wrapContentSize()
+                        .fillMaxSize()
                         .border(4.dp, Color.LightGray, MaterialTheme.shapes.small)
                         ,
                         onClick = { onReadErrorMessageForTask(itemToBeEdited.id) }) {
@@ -290,7 +292,9 @@ private fun CancelAndAddButtons(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(2.dp), horizontalArrangement = Arrangement.End
+            .padding(2.dp)
+
+            , horizontalArrangement = Arrangement.End
     ) {
         TextButton(
             onClick = {
@@ -347,7 +351,7 @@ private fun CancelAndSaveButtons(
                 backgroundColor = Color.LightGray.copy(0.0f)
             )
         ) {
-            Text(stringResource(R.string.save))
+            Text(stringResource(R.string.update))
         }
     }
 }
@@ -492,11 +496,13 @@ fun TaskForm(
     })
     val _permissions = listOf(
         Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        Manifest.permission.READ_EXTERNAL_STORAGE
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+
+
     )
     val permissions = remember {
-        if (VERSION.SDK_INT >= VERSION_CODES.R) _permissions.plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-            .plus(MANAGE_EXTERNAL_STORAGE).plus(Manifest.permission.MANAGE_DOCUMENTS).toList().reversed() else _permissions.toList()
+        if (VERSION.SDK_INT >= VERSION_CODES.R) _permissions.plus(Manifest.permission.QUERY_ALL_PACKAGES).plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+            .plus(MANAGE_EXTERNAL_STORAGE).toList().reversed() else _permissions.toList()
 //            .plus(MANAGE_EXTERNAL_STORAGE).toList().reversed() else _permissions.toList()
     }
     val srcLauncher = permissionLauncher(sourceDirectoryPickerLauncher, sourcePath, permissions)
