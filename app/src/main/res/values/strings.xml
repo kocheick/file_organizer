@@ -24,4 +24,6 @@
     <string name="update_file_extension_or_type_current_is">"Update file type, current is  %1$s"</string>
     <string name="save">Save</string>
     <string name="update">Update</string>
+    <string name="files_moved">Files Moved</string>
+    <string name="time_saved">Time saved</string>
 </resources>

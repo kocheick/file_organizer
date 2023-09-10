@@ -8,7 +8,9 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -94,7 +96,11 @@ fun MainScreen(viewModel: MainViewModel) {
                             if (items.isEmpty()) EmptyContentScreen()
                             else {
                                 val isRemovalDialogOpen = rememberSaveable { mutableStateOf(false) }
-                                Column(Modifier.animateContentSize(), horizontalAlignment = Alignment.CenterHorizontally){
+                                Column(
+                                    Modifier
+                                        .animateContentSize()
+                                    , horizontalAlignment = Alignment.CenterHorizontally){
+
                                     Stats(appStatistic = appStats)
                                     TaskListContent(
                                         tasksList = items,
