@@ -4,14 +4,13 @@ import android.app.Application
 import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.core.net.toUri
 import androidx.lifecycle.*
 import com.shevapro.filesorter.Utility
 import com.shevapro.filesorter.Utility.AVERAGE_MANUAL_FILE_MOVE_PER_SECOND
 import com.shevapro.filesorter.data.repository.Repository
+import com.shevapro.filesorter.model.AppExceptions
 import com.shevapro.filesorter.model.AppStatistic
 import com.shevapro.filesorter.model.EmptyContentException
-import com.shevapro.filesorter.model.MissingFieldException
 import com.shevapro.filesorter.model.MostUsed
 import com.shevapro.filesorter.model.PermissionExceptionForUri
 import com.shevapro.filesorter.model.TaskRecord
@@ -40,7 +39,8 @@ class MainViewModel(
 
 
     private val DELAY_TIME: Long = 2800
-    private var _tasks: MutableList<TaskRecord> = mutableListOf()
+    private var     _tasks: MutableList<TaskRecord> = mutableListOf()
+    private val uiTasks: List<UITaskRecord> get() = _tasks.map { it.toUITaskRecord() }
 
     private val _state: MutableStateFlow<UiState> = MutableStateFlow(UiState.Loading)
     val mainState = _state.asStateFlow()
@@ -55,9 +55,10 @@ class MainViewModel(
 //        _hasError.value = true
 
 
-
-        println("your failed proof ${exception.cause}")
-        _state.value = UiState.Data(_tasks.map { it.toUITaskRecord() }, exception)
+        _state.value = UiState.Data(
+            uiTasks,
+            AppExceptions.UnknownError(exception.message ?: "An error occured while processing..")
+        )
 
 
     }
@@ -141,7 +142,6 @@ class MainViewModel(
         _state.value = UiState.Loading
         viewModelScope.launch(Dispatchers.Unconfined + coroutineExceptionHandler) {
             //  for (i in  samples) addTask(i)
-            delay(DELAY_TIME)
 //            throw Exception("BOOM MISTAKE")
 
 
@@ -150,7 +150,8 @@ class MainViewModel(
                 SharingStarted.WhileSubscribed(), mutableListOf()
             ).collect { t ->
                 _tasks = t.toMutableList()
-                _state.value = UiState.Data(t.map { it.toUITaskRecord() })
+                _state.value = UiState.Data(uiTasks)
+
 
             }
         }
@@ -161,21 +162,31 @@ class MainViewModel(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(), mutableListOf()
             ).collect { list ->
-                if (list.isNotEmpty()){
+                if (list.isNotEmpty()) {
                     val numberOfFilesMoved = list.sumOf { it.numberOfFileMoved }
-                    val mostMovedFileByType: String = list.groupBy { it.extension }.mapValues { it.value.size }.maxBy { it.value }.key
-                    val topSource: String = list.groupBy { it.source }.mapValues { it.value.size }.maxBy { it.value }.key
-                    val topDestination: String = list.groupBy { it.target }.mapValues { it.value.size }.maxBy { it.value }.key
+                    val mostMovedFileByType: String =
+                        list.groupBy { it.extension }.mapValues { it.value.size }
+                            .maxBy { it.value }.key
+                    val topSource: String = list.groupBy { it.source }.mapValues { it.value.size }
+                        .maxBy { it.value }.key
+                    val topDestination: String =
+                        list.groupBy { it.target }.mapValues { it.value.size }
+                            .maxBy { it.value }.key
 
-val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND).roundToInt()
+                    val approxTimeSaved =
+                        (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND).roundToInt()
                     val item = AppStatistic(
                         numberOfFilesMoved,
                         MostUsed(
                             Utility.formatUriToUIString(
-                                Uri.decode(topSource)), Utility.formatUriToUIString(Uri.decode(topDestination))
-                        ,mostMovedFileByType), timeSavedInMinutes = approxTimeSaved )
+                                Uri.decode(topSource)
+                            ),
+                            Utility.formatUriToUIString(Uri.decode(topDestination)),
+                            mostMovedFileByType
+                        ), timeSavedInMinutes = approxTimeSaved
+                    )
 
-                    _appStats.value =  item
+                    _appStats.value = item
                 }
             }
 
@@ -194,47 +205,91 @@ val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND)
     }
 
     fun addNewItemWith(extension: String, source: String, destination: String) {
-        require(extension.isNotEmpty()) {
-            throw MissingFieldException("Please, verify type input is not empty.")
-        }
-        require(source.isNotEmpty()) {
-            throw MissingFieldException("Please, verify a source folder has been selected.")
-        }
-        require(destination.isNotEmpty()) {
-            throw MissingFieldException("Please, verify a destination folder has been selected.")
-        }
-        closeAddDialog()
-        viewModelScope.launch(IO + coroutineExceptionHandler) {
-
-
-            repository.addTask(
-                EMPTY_ITEM.copy(
-                    extension = extension,
-                    source = source,
-                    destination = destination,
-                    isActive = true
+        when {
+            extension.isEmpty() -> {
+                _state.value = UiState.Data(
+                    uiTasks,
+                    AppExceptions.MissingFieldException("Please, verify type input is not empty.")
                 )
-            )
-            _itemToAdd.update { null }
+            }
+
+            source.isEmpty() -> {
+                _state.value = UiState.Data(
+                    uiTasks,
+                    AppExceptions.MissingFieldException("Please, verify a source folder has been selected.")
+                )
+
+            }
+
+            destination.isEmpty() -> {
+                _state.value = UiState.Data(
+                    uiTasks,
+                    AppExceptions.MissingFieldException("Please, verify a destination folder has been selected.")
+                )
+
+            }
+
+            else -> {
+                closeAddDialog()
+                viewModelScope.launch(IO + coroutineExceptionHandler) {
 
 
+                    repository.addTask(
+                        EMPTY_ITEM.copy(
+                            extension = extension,
+                            source = source,
+                            destination = destination,
+                            isActive = true
+                        )
+                    )
+                    _itemToAdd.update { null }
+
+
+                }
+
+            }
         }
+
+
     }
 
     fun updateItem(itemToBeUpdated: UITaskRecord) {
 
-        viewModelScope.launch(IO + coroutineExceptionHandler) {
-            val old = getTaskById(itemToBeUpdated.id)
-            println("updating item ${itemToBeUpdated.id} from  $old to ${itemToBeUpdated}")
-            if (itemToBeUpdated.extension.isEmpty() or itemToBeUpdated.source.isEmpty() or itemToBeUpdated.destination.isEmpty()) {
-                closeAddDialog()
-                openEditDialog()
-                throw MissingFieldException("Please, verify all inputs are filled.")
-            } else {
-                closeEditDialog()
-                repository.updateTask(itemToBeUpdated.toTaskRecord())
+        when {
+            itemToBeUpdated.extension.isEmpty() -> {
+                _state.value = UiState.Data(
+                    uiTasks,
+                    AppExceptions.MissingFieldException("Please, verify type input is not empty.")
+                )
             }
 
+            itemToBeUpdated.source.isEmpty() -> {
+                _state.value = UiState.Data(
+                    uiTasks,
+                    AppExceptions.MissingFieldException("Please, verify a source folder has been selected.")
+                )
+
+            }
+
+            itemToBeUpdated.destination.isEmpty() -> {
+                _state.value = UiState.Data(
+                    uiTasks,
+                    AppExceptions.MissingFieldException("Please, verify a destination folder has been selected.")
+                )
+
+            }
+
+            else -> {
+
+                viewModelScope.launch(IO + coroutineExceptionHandler) {
+                    val old = getTaskById(itemToBeUpdated.id)
+                    println("updating item ${itemToBeUpdated.id} from  $old to ${itemToBeUpdated}")
+                    closeEditDialog()
+                    repository.updateTask(itemToBeUpdated.toTaskRecord())
+
+
+                }
+            }
         }
 
 
@@ -252,11 +307,11 @@ val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND)
     fun sortFiles() {
         _state.value = UiState.Loading
 
-            val items = _tasks.filter { it.isActive && it.errorMessage.isNullOrEmpty() }
-            println("VIEWMODEL : action processing ${items.size} items")
+        val items = _tasks.filter { it.isActive && it.errorMessage.isNullOrEmpty() }
+        println("VIEWMODEL : action processing ${items.size} items")
 
-            if (items.isNotEmpty()) {
-                viewModelScope.launch(IO + coroutineExceptionHandler) {
+        if (items.isNotEmpty()) {
+            viewModelScope.launch(IO + coroutineExceptionHandler) {
                 delay(DELAY_TIME)
 
                 items.forEach { task ->
@@ -269,11 +324,10 @@ val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND)
                             { progress -> _state.value = UiState.Processing(progress) },
 
                             )
-                    } catch (e:PermissionExceptionForUri){
-                        viewModelScope.launch{ repository.updateTask(task.copy(errorMessage = e.message)) }
+                    } catch (e: PermissionExceptionForUri) {
+                        viewModelScope.launch { repository.updateTask(task.copy(errorMessage = e.message)) }
                         sortFiles()
                     }
-
 
 
 //                    fileMover.moveFilesWithExtension(app,
@@ -296,14 +350,9 @@ val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND)
 //                        }
 //                    }
 
-                    _state.value = UiState.Data(_tasks.map { it.toUITaskRecord() }, null)
+                    _state.value = UiState.Data(uiTasks, null)
                 }
             }
-        } else {
-
-                println("VIEWMODEL : list is empty")
-                throw EmptyContentException("No item to be processed.")
-
         }
 //            initTasksΩΩTasks()
     }
@@ -316,11 +365,12 @@ val approxTimeSaved = (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND)
         }
     }
 
-    fun dissmissErrorMessageForTask(id: Int) = viewModelScope.launch(IO+coroutineExceptionHandler) {
-        val item = _tasks.first { it.id == id }.copy(errorMessage = null)
-        _itemToEdit.value = item.toUITaskRecord()
-        repository.updateTask(item)
-    }
+    fun dissmissErrorMessageForTask(id: Int) =
+        viewModelScope.launch(IO + coroutineExceptionHandler) {
+            val item = _tasks.first { it.id == id }.copy(errorMessage = null)
+            _itemToEdit.value = item.toUITaskRecord()
+            repository.updateTask(item)
+        }
 
 
 }

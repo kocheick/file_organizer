@@ -58,7 +58,8 @@ class FileMover private constructor(private val appStatsService: StatsService) {
 //                }
             println("moving files")
 
-            moveFiles(
+           if (filesToMove.isNotEmpty())
+               moveFiles(
                 filesToMove, destinationFolder, context.contentResolver, moveProgress,{ grantUrisPermissions(it,context = context) },
             )
 
@@ -113,7 +114,6 @@ class FileMover private constructor(private val appStatsService: StatsService) {
         shareStats: (TaskStats) -> Unit = {},
         retryCallback: (Uri) -> Unit = {},
     ) {
-        if (filesToMove.isNotEmpty()) {
             val total = filesToMove.size
 
             var stats = TaskStats(total,0,"")
@@ -165,12 +165,7 @@ println("moving ${file.name} progres should be $index")
 
                 }
 
-            }
 
-
-        } else {
-            println("No file file with extension found")
-            throw EmptyContentException("")
         }
     }
     suspend fun moveFilesWithExtension(context: Context,

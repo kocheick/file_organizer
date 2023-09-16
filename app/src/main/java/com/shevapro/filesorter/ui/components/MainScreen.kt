@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.shevapro.filesorter.*
 import com.shevapro.filesorter.R
 import com.shevapro.filesorter.Utility.emptyInteractionSource
+import com.shevapro.filesorter.model.AppExceptions
 import com.shevapro.filesorter.model.AppStatistic
 import com.shevapro.filesorter.model.EmptyContentException
 import com.shevapro.filesorter.model.MissingFieldException
@@ -92,8 +93,8 @@ fun MainScreen(viewModel: MainViewModel) {
                         -> {
                             val items = currentState.records
 
-
-                            if (items.isEmpty()) EmptyContentScreen()
+                            if (items.isEmpty())
+                                EmptyContentScreen()
                             else {
                                 val isRemovalDialogOpen = rememberSaveable { mutableStateOf(false) }
                                 Column(
@@ -105,9 +106,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                     TaskListContent(
                                         tasksList = items,
                                         onItemClick = { clickedTask ->
-
                                             viewModel.onUpdateItemToEdit(clickedTask)
-
                                             viewModel.openEditDialog()
                                         },
                                         onRemoveItem = { itemToBeRemoved ->
@@ -178,9 +177,9 @@ fun MainScreen(viewModel: MainViewModel) {
                     if (mainState is UiState.Data) AnimatedVisibility((mainState as UiState.Data).exception != null) {
                         when (val exception = (mainState as UiState.Data).exception) {
 
-                            is MissingFieldException -> {
+                            is AppExceptions.MissingFieldException -> {
                                 NotificationDialog(title = stringResource(id = R.string.missing_field),
-                                    message = exception.errorMessage,
+                                    message = exception.message,
                                     onDismiss = {
 //                                        if (itemToAdd != null && !isAddDialogOpen.value) isAddDialogOpen.value = true
 //                                        else if (itemToEdit != null && !isEditDialogOpen.value) isEditDialogOpen.value = true
@@ -190,7 +189,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                     })
                             }
 
-                            is NoFileFoundException -> {
+                            is AppExceptions.NoFileFoundException -> {
                                 NotificationDialog(title = "Result",
                                     message = exception.message
                                         ?: return@AnimatedVisibility,
@@ -199,7 +198,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                     })
                             }
 
-                            is EmptyContentException -> {
+                            is AppExceptions.EmptyContentException -> {
                                 NotificationDialog(title = "Message",
                                     message = exception.message
                                         ?: return@AnimatedVisibility,
@@ -208,21 +207,25 @@ fun MainScreen(viewModel: MainViewModel) {
                                     })
                             }
 
-                            is SecurityException -> {
+                            is AppExceptions.PermissionExceptionForUri -> {
                                 PermissionRequestDialog(
-                                    uri = exception.message?.substringBefore(" from")
+                                    uri = exception.errorMessage.substringBefore(" from")
                                         ?.substringAfter("content://") ?: "", onAuthorize = {
 
                                     }, onDismiss = {})
                             }
 
-                            else -> {
+                            is AppExceptions.UnknownError -> {
                                 NotificationDialog(title = "Oops.. an error occurred.",
-                                    message = exception?.message
+                                    message = exception.message
                                         ?: return@AnimatedVisibility,
                                     onDismiss = {
                                         viewModel.dismissError()
                                     })
+                            }
+
+                            else -> {
+
                             }
                         }
                     }
