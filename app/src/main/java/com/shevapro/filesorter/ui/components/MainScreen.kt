@@ -8,9 +8,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -33,9 +31,6 @@ import com.shevapro.filesorter.R
 import com.shevapro.filesorter.Utility.emptyInteractionSource
 import com.shevapro.filesorter.model.AppExceptions
 import com.shevapro.filesorter.model.AppStatistic
-import com.shevapro.filesorter.model.EmptyContentException
-import com.shevapro.filesorter.model.MissingFieldException
-import com.shevapro.filesorter.model.NoFileFoundException
 import com.shevapro.filesorter.model.UITaskRecord
 import com.shevapro.filesorter.model.UiState
 import com.shevapro.filesorter.ui.theme.AppTheme
@@ -178,7 +173,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         when (val exception = (mainState as UiState.Data).exception) {
 
                             is AppExceptions.MissingFieldException -> {
-                                NotificationDialog(title = stringResource(id = R.string.missing_field),
+                                NotificationDialog(title = stringResource(id = R.string.input_error),
                                     message = exception.message,
                                     onDismiss = {
 //                                        if (itemToAdd != null && !isAddDialogOpen.value) isAddDialogOpen.value = true
@@ -216,7 +211,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             }
 
                             is AppExceptions.UnknownError -> {
-                                NotificationDialog(title = "Oops.. an error occurred.",
+                                NotificationDialog(title = "Oops.. an unknown error occurred.",
                                     message = exception.message
                                         ?: return@AnimatedVisibility,
                                     onDismiss = {

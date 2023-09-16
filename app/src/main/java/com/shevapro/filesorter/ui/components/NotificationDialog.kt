@@ -7,7 +7,6 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.AlertDialog
@@ -34,14 +33,17 @@ fun NotificationDialog(title: String, message: String, onDismiss: () -> Unit) {
 
         buttons = {
 
-            Row(Modifier.fillMaxWidth().height(48.dp), horizontalArrangement = Arrangement.End) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp), horizontalArrangement = Arrangement.End) {
                 TextButton(modifier = Modifier.fillMaxHeight(),
                     onClick = {
                         onDismiss()
                     },
                     colors = ButtonDefaults.buttonColors(
-                        contentColor = colorResource(R.color.fiery_rose),
-                        backgroundColor = Color.LightGray.copy(0.0f)
+                        contentColor = colorResource(id = R.color.raisin_black),
+                        backgroundColor = Color.DarkGray.copy(0.2f)
                     )
                 ) {
                     Text(stringResource(id = R.string.ok))

@@ -16,6 +16,7 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -60,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
@@ -93,8 +95,7 @@ fun AddTaskDialog(
     AlertDialog(
         modifier = Modifier
             .padding(1.dp)
-            .border(0.dp, Color.Unspecified, RoundedCornerShape(12.dp))
-        ,
+            .border(0.dp, Color.Unspecified, RoundedCornerShape(12.dp)),
         onDismissRequest = {
             onDismiss()
             onSaveUpdates(
@@ -145,12 +146,12 @@ fun AddTaskDialog(
             )
         },
         buttons = {
-            CancelAndAddButtons(
+            ConfirmationButtons(actionTextLabel = stringResource(id = R.string.add),
                 onDismiss = {
                     onSaveUpdates(null)
                     onDismiss()
                 },
-                onAddClick = {
+                onAction = {
                     onAddItem(extension, source, destination)
 
 
@@ -167,7 +168,7 @@ fun EditTaskDialog(
     onUpdateItem: (UITaskRecord) -> Unit,
     onSaveUpdates: (UITaskRecord?) -> Unit,
     onDismiss: () -> Unit,
-    onReadErrorMessageForTask:(Int)->Unit ={}
+    onReadErrorMessageForTask: (Int) -> Unit = {}
 ) {
 
     var extension = itemToBeEdited.extension
@@ -177,22 +178,20 @@ fun EditTaskDialog(
 
     AlertDialog(modifier = Modifier
         .padding(1.dp)
-        .border(0.dp, Color.Unspecified, RoundedCornerShape(12.dp))
-        ,
+        .border(0.dp, Color.Unspecified, RoundedCornerShape(12.dp)),
         onDismissRequest = {
-        onDismiss()
-    },
+            onDismiss()
+        },
         title = { Text("Edit".uppercase()) },
         //alert dialog content/body goes in here
         text = {
 
-            Column{
+            Column {
                 itemToBeEdited.errorMessage?.let {
                     Button(modifier = Modifier
                         .padding(6.dp)
                         .fillMaxSize()
-                        .border(4.dp, Color.LightGray, MaterialTheme.shapes.small)
-                        ,
+                        .border(4.dp, Color.LightGray, MaterialTheme.shapes.small),
                         onClick = { onReadErrorMessageForTask(itemToBeEdited.id) }) {
                         Column(
 
@@ -268,10 +267,10 @@ fun EditTaskDialog(
             }
         },
         buttons = {
-            CancelAndSaveButtons(onDismiss = {
+            ConfirmationButtons(actionTextLabel = stringResource(R.string.update), onDismiss = {
                 onDismiss()
             },
-                onSaveUpdates = {
+                onAction = {
                     onUpdateItem(
                         itemToBeEdited.copy(
                             extension = extension,
@@ -287,16 +286,16 @@ fun EditTaskDialog(
 }
 
 @Composable
-private fun CancelAndAddButtons(
+private fun ConfirmationButtons(
+    actionTextLabel: String,
     onDismiss: () -> Unit,
-    onAddClick: () -> Unit,
+    onAction: () -> Unit,
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(2.dp)
-
-            , horizontalArrangement = Arrangement.End
+            .background(Color.LightGray.copy(0.3f))
+            .padding(2.dp), horizontalArrangement = Arrangement.End
     ) {
         TextButton(
             onClick = {
@@ -310,18 +309,38 @@ private fun CancelAndAddButtons(
             Text(stringResource(id = R.string.cancel))
         }
         TextButton(
+            modifier = Modifier.padding(horizontal = 4.dp),
             onClick = {
-                onAddClick()
+                onAction()
             },
             colors = ButtonDefaults.buttonColors(
-                contentColor = colorResource(R.color.fiery_rose),
-                backgroundColor = Color.LightGray.copy(0.0f)
+                contentColor = Color.Black,
+                backgroundColor = Color.DarkGray.copy(0.2f)
             )
         ) {
-            Text(stringResource(id = R.string.add))
+            Text(actionTextLabel)
         }
     }
 }
+
+@Preview()
+@Composable
+fun CancelAddPreview() {
+    Column {
+        ConfirmationButtons(
+            actionTextLabel = stringResource(R.string.add),
+            onDismiss = {  }) {
+
+        }
+        ConfirmationButtons(
+            actionTextLabel = stringResource(R.string.update),
+            onDismiss = { }) {
+
+        }
+
+    }
+}
+
 
 @Composable
 private fun CancelAndSaveButtons(
@@ -331,6 +350,7 @@ private fun CancelAndSaveButtons(
     Row(
         Modifier
             .fillMaxWidth()
+            .background(Color.LightGray)
             .padding(2.dp), horizontalArrangement = Arrangement.End
     ) {
         TextButton(
@@ -349,8 +369,8 @@ private fun CancelAndSaveButtons(
                 onSaveUpdates()
             },
             colors = ButtonDefaults.buttonColors(
-                contentColor = colorResource(R.color.fiery_rose),
-                backgroundColor = Color.LightGray.copy(0.0f)
+                contentColor = Color.Black,
+                backgroundColor = Color.DarkGray.copy(0.2f)
             )
         ) {
             Text(stringResource(R.string.update))
@@ -361,7 +381,7 @@ private fun CancelAndSaveButtons(
 @Composable
 fun MissingFieldDialog(message: String, onDismiss: () -> Unit) {
     AlertDialog(onDismissRequest = { onDismiss() },
-        title = { Text(stringResource(R.string.missing_field)) },
+        title = { Text(stringResource(R.string.input_error)) },
         text = { Text(text = message) },
         buttons = {
             Row(
@@ -501,9 +521,10 @@ fun TaskForm(
         Manifest.permission.READ_EXTERNAL_STORAGE,
 
 
-    )
+        )
     val permissions = remember {
-        if (VERSION.SDK_INT >= VERSION_CODES.R) _permissions.plus(Manifest.permission.QUERY_ALL_PACKAGES).plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+        if (VERSION.SDK_INT >= VERSION_CODES.R) _permissions.plus(Manifest.permission.QUERY_ALL_PACKAGES)
+            .plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
             .toList().reversed() else _permissions.toList()
 //            .plus(MANAGE_EXTERNAL_STORAGE).toList().reversed() else _permissions.toList()
     }
@@ -518,7 +539,6 @@ fun TaskForm(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.SpaceEvenly
     ) {
-
 
 
         Text(
@@ -549,7 +569,7 @@ fun TaskForm(
             text = stringResource(R.string.source),
             path = formattedSource.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
-               if (VERSION.SDK_INT < TIRAMISU)  srcLauncher.launch(permissions.toTypedArray())
+                if (VERSION.SDK_INT < TIRAMISU) srcLauncher.launch(permissions.toTypedArray())
                 else sourceDirectoryPickerLauncher.launch(sourcePath.value.toUri())
             }
         )
@@ -571,7 +591,7 @@ fun TaskForm(
             text = stringResource(R.string.destination),
             path = formattedDestination.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
-                if (VERSION.SDK_INT < TIRAMISU)  destLauncher.launch(permissions.toTypedArray())
+                if (VERSION.SDK_INT < TIRAMISU) destLauncher.launch(permissions.toTypedArray())
                 else destinationDirectoryPickerLauncher.launch(destPath.value.toUri())
 
             })
@@ -593,11 +613,12 @@ fun permissionLauncher(
 
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
 
-    val storageAccessPermissionState = rememberPermissionState(permission = Manifest.permission.WRITE_EXTERNAL_STORAGE)
+    val storageAccessPermissionState =
+        rememberPermissionState(permission = Manifest.permission.WRITE_EXTERNAL_STORAGE)
 
 
-    val path =   if (sourcePath.value == stringResource(id = (R.string.no_folder_selected))) Uri.EMPTY else sourcePath.value?.toUri()
-
+    val path =
+        if (sourcePath.value == stringResource(id = (R.string.no_folder_selected))) Uri.EMPTY else sourcePath.value?.toUri()
 
 
     val launcher = rememberLauncherForActivityResult(
@@ -680,7 +701,12 @@ private fun SwapPathsButton(
                     contentDescription = stringResource(id = R.string.reverse_icon)
                 )
             }
-            Text(stringResource(R.string.reverse_paths), fontWeight = FontWeight.Light, fontSize = 10.sp,color = Color.DarkGray)
+            Text(
+                stringResource(R.string.swap_paths),
+                fontWeight = FontWeight.Light,
+                fontSize = 10.sp,
+                color = Color.DarkGray
+            )
         }
     }
 }
