@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,7 +44,18 @@ fun Stats(appStatistic: AppStatistic) {
     var expanded by rememberSaveable { mutableStateOf(true) }
     val config = LocalConfiguration.current
 
-    val widthFraction by remember { mutableFloatStateOf(if (config.screenWidthDp.dp < 600.dp) 0.9f else 0.5f) }
+    val widthFraction = remember { if (config.screenWidthDp.dp < 600.dp)
+        //regular phone size
+        0.9f
+    else if (config.screenWidthDp.dp < 900.dp)
+        //7-in tablets size
+        0.6f
+    else
+        //10-in tablets sizs
+        0.5f
+    }
+//    val widthFraction = remember { (if (config.screenWidthDp.dp < 600.dp) 0.9f  else 0.5f) }
+    val itemWidthFraction = remember { if (config.screenWidthDp.dp < 600.dp) .9f else 0.7f }
 
     Column(
         modifier = Modifier
@@ -133,12 +145,12 @@ fun Stats(appStatistic: AppStatistic) {
                     Spacer(Modifier.height(4.dp))
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(widthFraction),
+                        modifier = Modifier.fillMaxWidth(itemWidthFraction),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = "Top " + "Source", fontSize = 10.sp)
-                        Text(
+                        if (appStatistic.mostUsed.topSourceFolder.isNotEmpty())  Text(
 //                                modifier = Modifier.align(Alignment.CenterHorizontally),
                             modifier = Modifier
                                 .border(
@@ -155,12 +167,12 @@ fun Stats(appStatistic: AppStatistic) {
                         )
                     }
                     Row(
-                        modifier = Modifier.fillMaxWidth(widthFraction),
+                        modifier = Modifier.fillMaxWidth(itemWidthFraction),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = "Top " + "Destination", fontSize = 10.sp)
-                        Text(
+                        if (appStatistic.mostUsed.topDestinationFolder.isNotEmpty())   Text(
 //                                modifier = Modifier.align(Alignment.CenterHorizontally),
                             modifier = Modifier
                                 .border(
@@ -178,12 +190,12 @@ fun Stats(appStatistic: AppStatistic) {
                     }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(widthFraction),
+                        modifier = Modifier.fillMaxWidth(itemWidthFraction),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = "Top " + "File Type", fontSize = 10.sp)
-                        Text(
+                        if (appStatistic.mostUsed.topMovedFileByType.isNotEmpty()) Text(
                             modifier = Modifier
                                 .border(
                                     1.dp,

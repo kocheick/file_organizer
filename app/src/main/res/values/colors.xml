@@ -12,6 +12,7 @@
     <color name="lavender_blush">#f6e8ea</color>
     <color name="fiery_rose">#ef626c</color>
     <color name="raisin_black">#22181c</color>
+    <color name="dark_gray_text">#444444</color>
     <color name="jet">#312f2f</color>
     <color name="middle_blue_green">#84dccf</color>
 </resources>

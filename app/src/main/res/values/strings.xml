@@ -5,7 +5,7 @@
     <string name="source">Source</string>
     <string name="selectFolders">Select folders below</string>
     <string name="edit">Edit</string>
-    <string name="reverse_button">reverse button</string>
+    <string name="reverse_icon">reverse icon</string>
     <string name="are_you_sure_to_remove_this_item">Are you sure to remove this item ?</string>
     <string name="delete_item_with_id_and_extension">delete item %1$d with extension %1$s</string>
     <string name="remove_item_with_extension">Remove item with extension %1$s</string>
@@ -26,4 +26,5 @@
     <string name="update">Update</string>
     <string name="files_moved">Files Moved</string>
     <string name="time_saved">Time saved</string>
+    <string name="reverse_paths">reverse paths</string>
 </resources>

@@ -6,7 +6,10 @@ import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Text
@@ -19,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shevapro.filesorter.R
 
@@ -26,9 +30,12 @@ import com.shevapro.filesorter.R
 @Composable
 fun NotificationDialog(title: String, message: String, onDismiss: () -> Unit) {
     AlertDialog(onDismissRequest = { onDismiss() },
-        title = { Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold) }, buttons = {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(
+        title = { Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold) },
+
+        buttons = {
+
+            Row(Modifier.fillMaxWidth().height(48.dp), horizontalArrangement = Arrangement.End) {
+                TextButton(modifier = Modifier.fillMaxHeight(),
                     onClick = {
                         onDismiss()
                     },

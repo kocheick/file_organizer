@@ -3,7 +3,6 @@
 package com.shevapro.filesorter.ui.components
 
 import android.Manifest
-import android.Manifest.permission.MANAGE_EXTERNAL_STORAGE
 import android.app.Activity
 import android.app.Activity.RESULT_OK
 import android.content.Intent
@@ -11,13 +10,12 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
+import android.os.Build.VERSION_CODES.TIRAMISU
 import android.provider.Settings
-import android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -95,7 +93,7 @@ fun AddTaskDialog(
     AlertDialog(
         modifier = Modifier
             .padding(1.dp)
-            .border(0.dp,Color.Unspecified, RoundedCornerShape(12.dp))
+            .border(0.dp, Color.Unspecified, RoundedCornerShape(12.dp))
         ,
         onDismissRequest = {
             onDismiss()
@@ -177,7 +175,11 @@ fun EditTaskDialog(
     var destination = itemToBeEdited.destination
 
 
-    AlertDialog(modifier = Modifier.border(1.dp,Color.LightGray, RoundedCornerShape(12.dp)),onDismissRequest = {
+    AlertDialog(modifier = Modifier
+        .padding(1.dp)
+        .border(0.dp, Color.Unspecified, RoundedCornerShape(12.dp))
+        ,
+        onDismissRequest = {
         onDismiss()
     },
         title = { Text("Edit".uppercase()) },
@@ -502,7 +504,7 @@ fun TaskForm(
     )
     val permissions = remember {
         if (VERSION.SDK_INT >= VERSION_CODES.R) _permissions.plus(Manifest.permission.QUERY_ALL_PACKAGES).plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-            .plus(MANAGE_EXTERNAL_STORAGE).toList().reversed() else _permissions.toList()
+            .toList().reversed() else _permissions.toList()
 //            .plus(MANAGE_EXTERNAL_STORAGE).toList().reversed() else _permissions.toList()
     }
     val srcLauncher = permissionLauncher(sourceDirectoryPickerLauncher, sourcePath, permissions)
@@ -526,7 +528,7 @@ fun TaskForm(
         )
         TextField(
             singleLine = true, maxLines = 1,
-            label = { Text(stringResource(R.string.enter_file_type)) },
+            label = { Text(stringResource(R.string.enter_file_type), color = Color.DarkGray) },
             value = typeTextState.value,
             onValueChange = {
                 typeTextState.value = it
@@ -547,7 +549,8 @@ fun TaskForm(
             text = stringResource(R.string.source),
             path = formattedSource.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
-                srcLauncher.launch(permissions.toTypedArray())
+               if (VERSION.SDK_INT < TIRAMISU)  srcLauncher.launch(permissions.toTypedArray())
+                else sourceDirectoryPickerLauncher.launch(sourcePath.value.toUri())
             }
         )
         // SWAP BUTTON
@@ -568,14 +571,14 @@ fun TaskForm(
             text = stringResource(R.string.destination),
             path = formattedDestination.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
-                destLauncher.launch(permissions.toTypedArray())
+                if (VERSION.SDK_INT < TIRAMISU)  destLauncher.launch(permissions.toTypedArray())
+                else destinationDirectoryPickerLauncher.launch(destPath.value.toUri())
 
             })
 
         sourcePath.value?.let { onSourceUriChange(it) }
         destPath.value?.let { onDestinationUriChange(it) }
 
-        println("your task ${taskToBeEdited}")
 
     }
 
@@ -590,12 +593,9 @@ fun permissionLauncher(
 
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
 
-    val storageAccessPermissionState = if (VERSION.SDK_INT >= VERSION_CODES.R) {
-        rememberPermissionState(permission = ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-    } else {
-        rememberPermissionState(permission = Manifest.permission.WRITE_EXTERNAL_STORAGE)
+    val storageAccessPermissionState = rememberPermissionState(permission = Manifest.permission.WRITE_EXTERNAL_STORAGE)
 
-    }
+
     val path =   if (sourcePath.value == stringResource(id = (R.string.no_folder_selected))) Uri.EMPTY else sourcePath.value?.toUri()
 
 
@@ -604,7 +604,9 @@ fun permissionLauncher(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
         onResult = { permissionMap ->
 
-            val areGranted = permissionMap.values.reduce { acc, next -> acc && next }
+            val areGranted = permissionMap.values.reduce { acc, next ->
+                acc && next
+            }
             if (areGranted) {
                 println("Permission granted")
 
@@ -618,7 +620,6 @@ fun permissionLauncher(
 
             } else {
                 println("Permission not granted")
-                println("revoked : ${permissionState.revokedPermissions}")
                 if (VERSION.SDK_INT >= VERSION_CODES.R) {
                     when (storageAccessPermissionState.status) {
                         is PermissionStatus.Granted -> {
@@ -636,14 +637,13 @@ fun permissionLauncher(
                         }
                     }
                 } else permissionState.launchMultiplePermissionRequest()
-
-
-                directoryPickerLauncher.launch(path)
+//                directoryPickerLauncher.launch(sourcePath.value?.toUri())
 
             }
             println("is it back to granted $areGranted ${permissionMap.values.reduce { acc, next -> acc && next }}")
 
         })
+
     return launcher
 }
 
@@ -671,16 +671,16 @@ private fun SwapPathsButton(
                     Icons.Rounded.DoubleArrow, modifier = Modifier
                         .rotate(90F)
                         .wrapContentSize(),
-                    contentDescription = stringResource(id = R.string.reverse_button)
+                    contentDescription = stringResource(id = R.string.reverse_icon)
                 )
                 Icon(
                     Icons.Rounded.DoubleArrow, modifier = Modifier
                         .rotate(-90F)
                         .wrapContentSize(),
-                    contentDescription = stringResource(id = R.string.reverse_button)
+                    contentDescription = stringResource(id = R.string.reverse_icon)
                 )
             }
-            Text("swap paths", fontWeight = FontWeight.Light, fontSize = 10.sp)
+            Text(stringResource(R.string.reverse_paths), fontWeight = FontWeight.Light, fontSize = 10.sp,color = Color.DarkGray)
         }
     }
 }
@@ -708,8 +708,8 @@ private fun FolderPickerButton(
             },
             colors = ButtonDefaults
                 .buttonColors(
-                    backgroundColor = colorResource(R.color.fiery_rose),
-                    contentColor = colorResource(R.color.white)
+                    backgroundColor = colorResource(R.color.fiery_rose).copy(0.8f),
+                    contentColor = colorResource(R.color.raisin_black)
                 )
         ) {
             Text(text, textAlign = TextAlign.Center)
