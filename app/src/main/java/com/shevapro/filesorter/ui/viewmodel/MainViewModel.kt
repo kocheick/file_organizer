@@ -10,7 +10,6 @@ import com.shevapro.filesorter.Utility.AVERAGE_MANUAL_FILE_MOVE_PER_SECOND
 import com.shevapro.filesorter.data.repository.Repository
 import com.shevapro.filesorter.model.AppExceptions
 import com.shevapro.filesorter.model.AppStatistic
-import com.shevapro.filesorter.model.EmptyContentException
 import com.shevapro.filesorter.model.MostUsed
 import com.shevapro.filesorter.model.PermissionExceptionForUri
 import com.shevapro.filesorter.model.TaskRecord
@@ -71,12 +70,12 @@ class MainViewModel(
     private var _itemToEdit: MutableStateFlow<UITaskRecord?> = MutableStateFlow(null)
     val itemToEdit = _itemToEdit.asStateFlow()
     private var _itemToRemove: MutableStateFlow<UITaskRecord?> = MutableStateFlow(null)
-    val itemToRemove = _itemToRemove.asStateFlow()
+    val itemToRemove get() =  _itemToRemove.asStateFlow()
     private var _itemToAdd: MutableStateFlow<UITaskRecord?> = MutableStateFlow(null)
-    val itemToAdd = _itemToAdd.asStateFlow()
+    val itemToAdd get() =  _itemToAdd.asStateFlow()
 
     private var _isAddDialogpOpen: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isAddDialogpOpen = _isAddDialogpOpen.asStateFlow()
+    val isAddDialogpOpen get() =  _isAddDialogpOpen.asStateFlow()
 
     private var _isEditDialogpOpen: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isEditDialogpOpen = _isEditDialogpOpen
@@ -84,7 +83,11 @@ class MainViewModel(
 
     private var _appStats: MutableStateFlow<AppStatistic> = MutableStateFlow(AppStatistic())
 
-    val appStats = _appStats.asStateFlow()
+    val appStats get() =  _appStats.asStateFlow()
+
+    private var _foundExtensions: MutableStateFlow<List<String>> = MutableStateFlow(emptyList())
+    val foundExtensions get() =  _foundExtensions.asStateFlow()
+
 
 
     init {
@@ -371,6 +374,15 @@ class MainViewModel(
             _itemToEdit.value = item.toUITaskRecord()
             repository.updateTask(item)
         }
+
+    fun getExtensionsForNewSource(folder:String) {
+        val extensions = fileMover.getFilesExtensionsForFolder(folder, app)
+        _foundExtensions.value = extensions
+    }
+    fun getExtensionsForPreviousSource(folder:String): List<String> = fileMover.getFilesExtensionsForFolder(folder, app)
+
+
+
 
 
 }

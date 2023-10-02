@@ -6,19 +6,15 @@ import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.os.Build
-import android.os.FileUtils
 import android.provider.MediaStore
 import androidx.documentfile.provider.DocumentFile
-import com.shevapro.filesorter.Utility
+import com.shevapro.filesorter.Utility.grantPermissionForUri
 import com.shevapro.filesorter.Utility.grantUrisPermissions
-import com.shevapro.filesorter.model.EmptyContentException
-import com.shevapro.filesorter.model.PermissionExceptionForUri
 import com.shevapro.filesorter.model.TaskStats
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.nio.file.Files
 
 class FileMover private constructor(private val appStatsService: StatsService) {
 
@@ -29,7 +25,16 @@ class FileMover private constructor(private val appStatsService: StatsService) {
      fun getStats() = appStatsService.getLatestStats()
     suspend fun resetStats() = appStatsService.resetStats()
 
+    fun getFilesExtensionsForFolder(path: String, context: Context): List<String> {
+        val folderPath = Uri.parse(path)
+        val folder = getDocumentFile(context, folderPath)
+            ?: throw Exception("Selected folder is not accessible or the app is not granted the required permissions.")
 
+        return folder.listFiles().filter { it.isFile }
+            .map { val fileName = it.name; fileName?.substringAfter(".") ?: "" }
+            .filter { it.isNotEmpty() }.toSet().toList()
+
+    }
     suspend fun moveFilesByType(
         source: String,
         destination: String,
@@ -86,6 +91,14 @@ class FileMover private constructor(private val appStatsService: StatsService) {
 
     fun askPermissionForUri(uri: Uri) {
 
+    }
+
+    private fun getDocumentFile(context:Context,pathUri : Uri): DocumentFile? {
+
+        grantPermissionForUri( context,pathUri)
+
+        val documentFile = DocumentFile.fromTreeUri(context, pathUri)
+           return documentFile
     }
 
     private fun getFoldersAsDocumentFiles(

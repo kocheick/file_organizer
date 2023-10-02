@@ -7,7 +7,7 @@ data class UITaskRecord(
     val destination: String,
     val isActive: Boolean = false,
     val errorMessage:String? = null,
-    val id: Int
+    val id: Int = -1
 ) {
     fun toTaskRecord(): TaskRecord = TaskRecord(extension, source, destination, isActive,errorMessage, id)
 

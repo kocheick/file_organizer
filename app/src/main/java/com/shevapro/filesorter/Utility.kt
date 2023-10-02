@@ -85,7 +85,7 @@ object Utility {
         if (destinationFolderUri != Uri.EMPTY)  grantPermissionForUri(context, destinationFolderUri)
     }
 
-    private fun grantPermissionForUri(
+    fun grantPermissionForUri(
         context: Context,
         sourceFileUri: Uri,
     ) {

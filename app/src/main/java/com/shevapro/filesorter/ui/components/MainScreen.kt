@@ -54,7 +54,10 @@ fun MainScreen(viewModel: MainViewModel) {
     val itemToRemove by viewModel.itemToRemove.collectAsState()
     val itemToAdd by viewModel.itemToAdd.collectAsState()
 
+    val foundExtensions : List<String> by viewModel.foundExtensions.collectAsState()
+
     val appStats: AppStatistic by viewModel.appStats.collectAsState()
+
 
 
 
@@ -118,7 +121,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                 AnimatedVisibility(
                                     isEditDialogOpen && itemToEdit != null
                                 ) {
-                                    EditTaskDialog(
+                                    EditDialog(
                                         itemToBeEdited = itemToEdit ?: return@AnimatedVisibility,
                                         onUpdateItem = { viewModel.updateItem(it) },
                                         onSaveUpdates = { viewModel.onUpdateItemToEdit(it) },
@@ -167,7 +170,15 @@ fun MainScreen(viewModel: MainViewModel) {
                             item = itemToAdd ?: return@AnimatedVisibility,
                             onDismiss = {
                                 viewModel.closeAddDialog()
-                            })
+                            },
+                            onSourceSelected = {
+                                itemToAdd?.source?.let { it1 ->
+                                   if (it1.length > 30) viewModel.getExtensionsForNewSource(
+                                        it1
+                                    )
+                                }
+                            },
+                            foundExtensions = foundExtensions )
                     }
                     if (mainState is UiState.Data) AnimatedVisibility((mainState as UiState.Data).exception != null) {
                         when (val exception = (mainState as UiState.Data).exception) {

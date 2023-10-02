@@ -16,9 +16,12 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +34,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -82,7 +87,9 @@ fun AddTaskDialog(
     item: UITaskRecord,
     onAddItem: (String, String, String) -> Unit,
     onDismiss: () -> Unit,
-    onSaveUpdates: (UITaskRecord?) -> Unit
+    onSaveUpdates: (UITaskRecord?) -> Unit,
+    foundExtensions: List<String> = emptyList(),
+    onSourceSelected: (String) -> Unit
 ) {
 
 
@@ -108,7 +115,44 @@ fun AddTaskDialog(
         title = { Text(stringResource(R.string.add_item).uppercase()) },
         //alert dialog content/body goes in here
         text = {
-            TaskForm(
+//            TaskForm(
+//                taskToBeEdited = item,
+//                onDestinationUriChange = {
+//                    destination = it
+//                    onSaveUpdates(
+//                        item.copy(
+//                            extension = extension, source = source, destination
+//                            = it, id = item.id
+//                        )
+//                    )
+//                },
+//                onSourceUriChange = {
+//                    source = it
+//                    onSaveUpdates(
+//                        item.copy(
+//                            extension = extension, source = it, destination
+//                            = destination, id = item.id
+//                        )
+//                    )
+//                },
+//                onTypeChange = {
+//                    extension = it
+//                    onSaveUpdates(
+//                        item.copy(
+//                            extension = it, source = source, destination
+//                            = destination, id = item.id
+//                        )
+//                    )
+//                },
+//                extensionLabelText =
+//                stringResource(
+//                    id = R.string.enter_file_extension_or_type_with,
+//                    extension.uppercase()
+//                )
+//
+//            )
+
+            TaskFormEditor(
                 taskToBeEdited = item,
                 onDestinationUriChange = {
                     destination = it
@@ -121,6 +165,7 @@ fun AddTaskDialog(
                 },
                 onSourceUriChange = {
                     source = it
+                    onSourceSelected(it)
                     onSaveUpdates(
                         item.copy(
                             extension = extension, source = it, destination
@@ -128,7 +173,7 @@ fun AddTaskDialog(
                         )
                     )
                 },
-                onTypeChange = {
+                onNewTypeSelected = {
                     extension = it
                     onSaveUpdates(
                         item.copy(
@@ -141,7 +186,8 @@ fun AddTaskDialog(
                 stringResource(
                     id = R.string.enter_file_extension_or_type_with,
                     extension.uppercase()
-                )
+                ),
+                typesFromSelectedSource = foundExtensions
 
             )
         },
@@ -161,6 +207,147 @@ fun AddTaskDialog(
     )
 }
 
+@Preview
+@Composable
+fun NewTaskFormPreview() {
+    val previewTask = UITaskRecord(
+        "mp3", "content://com.andråçoid.externalstorage.documents/tree/primary:Pictures",
+        "content://com.android.externalstorage.documents/tree/primary:Music"
+    )
+
+    TaskFormEditor(
+        taskToBeEdited = previewTask,
+        onSourceUriChange = {},
+        onDestinationUriChange = {},
+        onNewTypeSelected = {},
+        extensionLabelText = "",
+        listOf("mp3", "pdf")
+    )
+}
+
+@Composable
+fun EditDialog(
+    itemToBeEdited: UITaskRecord,
+    onUpdateItem: (UITaskRecord) -> Unit,
+    onSaveUpdates: (UITaskRecord?) -> Unit,
+    onDismiss: () -> Unit,
+    onReadErrorMessageForTask: (Int) -> Unit = {}
+) {
+
+    var extension = itemToBeEdited.extension
+    var source = itemToBeEdited.source
+    var destination = itemToBeEdited.destination
+
+
+    AlertDialog(modifier = Modifier
+        .padding(1.dp)
+        .border(0.dp, Color.Unspecified, RoundedCornerShape(12.dp)),
+        onDismissRequest = {
+            onDismiss()
+        },
+        title = { Text("Edit".uppercase()) },
+        //alert dialog content/body goes in here
+        text = {
+
+            Column {
+                itemToBeEdited.errorMessage?.let {
+                    Button(modifier = Modifier
+                        .padding(6.dp)
+                        .fillMaxSize()
+                        .border(4.dp, Color.LightGray, MaterialTheme.shapes.small),
+                        onClick = { onReadErrorMessageForTask(itemToBeEdited.id) }) {
+                        Column(
+
+                        )
+                        {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Outlined.AddAlert,
+                                    contentDescription = "error message"
+                                )
+                                Text(
+                                    maxLines = 1,
+                                    text = "Attention ", fontWeight = FontWeight.Normal,
+                                    fontSize = 14.sp
+                                )
+
+                            }
+                            Text(
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 3,
+                                text = it,
+                                overflow = TextOverflow.Ellipsis,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(
+                    modifier = Modifier
+                        .height(2.dp)
+                        .fillMaxWidth()
+                        .padding(10.dp)
+                )
+
+                TaskForm(
+                    onSourceUriChange = {
+                        source = it
+                        onSaveUpdates(
+                            itemToBeEdited.copy(
+                                extension = extension, source = source,
+                                destination
+                                = destination,
+                            )
+                        )
+
+                    },
+                    onDestinationUriChange = {
+                        destination = it
+                        onSaveUpdates(
+                            itemToBeEdited.copy(
+                                extension = extension, source = source,
+                                destination
+                                = destination,
+                            )
+                        )
+                    },
+                    taskToBeEdited = itemToBeEdited,
+                    onTypeChange = {
+                        extension = it
+                        onSaveUpdates(
+                            itemToBeEdited.copy(
+                                extension = extension, source = source,
+                                destination
+                                = destination,
+                            )
+                        )
+                    },
+                    extensionLabelText = stringResource(
+                        id = R.string.update_file_extension_or_type_current_is,
+                        itemToBeEdited.extension.uppercase()
+                    )
+                )
+            }
+        },
+        buttons = {
+            ConfirmationButtons(actionTextLabel = stringResource(R.string.update), onDismiss = {
+                onDismiss()
+            },
+                onAction = {
+                    onUpdateItem(
+                        itemToBeEdited.copy(
+                            extension = extension,
+                            source = source,
+                            destination = destination
+                        )
+                    )
+
+                })
+        }
+    )
+
+}
 
 @Composable
 fun EditTaskDialog(
@@ -315,7 +502,7 @@ private fun ConfirmationButtons(
             },
             colors = ButtonDefaults.buttonColors(
                 contentColor = Color.Black,
-                backgroundColor = Color.DarkGray.copy(0.2f)
+                backgroundColor = Color.DarkGray.copy(0.14f)
             )
         ) {
             Text(actionTextLabel)
@@ -329,7 +516,7 @@ fun CancelAddPreview() {
     Column {
         ConfirmationButtons(
             actionTextLabel = stringResource(R.string.add),
-            onDismiss = {  }) {
+            onDismiss = { }) {
 
         }
         ConfirmationButtons(
@@ -496,9 +683,6 @@ fun TaskForm(
     val sourcePath = remember { mutableStateOf(src) }
     val destPath = remember { mutableStateOf(dest) }
 
-    val isRoot: (String?) -> Boolean =
-        { path -> if (path == null) false else Uri.parse(path).lastPathSegment.equals("primary:") }
-
 
     val formattedSource = Utility.formatUriToUIString(
         Uri.decode(sourcePath.value) ?: stringResource(R.string.no_folder_selected)
@@ -573,6 +757,148 @@ fun TaskForm(
                 else sourceDirectoryPickerLauncher.launch(sourcePath.value.toUri())
             }
         )
+        // SWAP BUTTON
+        SwapPathsButton(
+            modifier = Modifier.align(Alignment.End),
+            isActive = !sourcePath.value.isNullOrEmpty() or !destPath.value.isNullOrEmpty(),
+            onClick = {
+                swipePath(
+                    sourcePath as MutableState<String>,
+                    destPath as MutableState<String>
+                )
+            }
+        )
+
+// PICK DEST BUTTON
+
+        FolderPickerButton(
+            text = stringResource(R.string.destination),
+            path = formattedDestination.ifBlank { stringResource(R.string.no_folder_selected) },
+            onPick = {
+                if (VERSION.SDK_INT < TIRAMISU) destLauncher.launch(permissions.toTypedArray())
+                else destinationDirectoryPickerLauncher.launch(destPath.value.toUri())
+
+            })
+
+        sourcePath.value?.let { onSourceUriChange(it) }
+        destPath.value?.let { onDestinationUriChange(it) }
+
+
+    }
+
+}
+
+@Composable
+fun TaskFormEditor(
+    taskToBeEdited: UITaskRecord,
+    onSourceUriChange: (String) -> Unit,
+    onDestinationUriChange: (String) -> Unit,
+    onNewTypeSelected: (String) -> Unit,
+    extensionLabelText: String,
+    typesFromSelectedSource: List<String> = emptyList()
+) {
+    val src = Uri.decode(taskToBeEdited.source)
+    val dest = Uri.decode(taskToBeEdited.destination)
+
+    val sourcePath = remember { mutableStateOf(src) }
+    val destPath = remember { mutableStateOf(dest) }
+
+
+    val formattedSource = Utility.formatUriToUIString(
+        Uri.decode(sourcePath.value) ?: stringResource(R.string.no_folder_selected)
+    )
+    val formattedDestination = Utility.formatUriToUIString(
+        Uri.decode(destPath.value) ?: stringResource(R.string.no_folder_selected)
+    )
+
+
+    val sourceDirectoryPickerLauncher = pickDirectory(pickedUri = {
+        sourcePath.value = it
+    })
+    val destinationDirectoryPickerLauncher = pickDirectory(pickedUri = {
+        destPath.value = it
+    })
+    val _permissions = listOf(
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+
+
+        )
+    val permissions = remember {
+        if (VERSION.SDK_INT >= VERSION_CODES.R) _permissions.plus(Manifest.permission.QUERY_ALL_PACKAGES)
+            .plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+            .toList().reversed() else _permissions.toList()
+//            .plus(MANAGE_EXTERNAL_STORAGE).toList().reversed() else _permissions.toList()
+    }
+    val srcLauncher = permissionLauncher(sourceDirectoryPickerLauncher, sourcePath, permissions)
+    val destLauncher =
+        permissionLauncher(destinationDirectoryPickerLauncher, destPath, permissions)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.SpaceEvenly
+    ) {
+
+//
+//        Text(
+//            fontWeight = FontWeight.SemiBold,
+//            maxLines = 1,
+//            text = extensionLabelText
+//        )
+//        Spacer(modifier = Modifier.height(8.dp))
+
+
+
+        Text(
+            maxLines = 1,
+            text = stringResource(R.string.selectFolders),
+            fontWeight = FontWeight.SemiBold
+        )
+// PICK SOURCE BUTTON
+
+        FolderPickerButton(
+            text = stringResource(R.string.source),
+            path = formattedSource.ifBlank { stringResource(R.string.no_folder_selected) },
+            onPick = {
+                if (VERSION.SDK_INT < TIRAMISU) srcLauncher.launch(permissions.toTypedArray())
+                else sourceDirectoryPickerLauncher.launch(sourcePath.value.toUri())
+            }
+        )
+
+        AnimatedVisibility (typesFromSelectedSource.isNotEmpty()) {
+            Text(
+                maxLines = 1,
+                text =  "Pick the type of file you wish to move",
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                items(typesFromSelectedSource) { type ->
+                    val borderBackground =  if (type == taskToBeEdited.extension) colorResource(id = R.color.fiery_rose) else Color.Unspecified
+                    val background =  if (type == taskToBeEdited.extension) colorResource(id = R.color.fiery_rose).copy(0.3f) else colorResource(id = R.color.fiery_rose).copy(0.2f)
+                    Box(contentAlignment = Alignment.Center,modifier = Modifier
+                        .defaultMinSize(minWidth = 40.dp)
+                        .background(
+                            background,
+                            RoundedCornerShape(16.dp)
+                        )
+                        .border(2.dp, borderBackground, RoundedCornerShape(16.dp))
+                        .padding(8.dp)
+                        .clickable { onNewTypeSelected(type) }) {
+                        Text(type, fontWeight = if (type == taskToBeEdited.extension) FontWeight.Medium else FontWeight.Normal)
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
         // SWAP BUTTON
         SwapPathsButton(
             modifier = Modifier.align(Alignment.End),
