@@ -41,7 +41,7 @@ import com.shevapro.filesorter.ui.theme.AppThemeLight
 
 @Composable
 fun Stats(appStatistic: AppStatistic) {
-    var expanded by rememberSaveable { mutableStateOf(true) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     val config = LocalConfiguration.current
 
     val widthFraction = remember { if (config.screenWidthDp.dp < 600.dp)
