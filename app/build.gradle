@@ -1,19 +1,21 @@
 plugins {
     id 'com.android.application'
-    id 'kotlin-android'
-    id 'com.google.devtools.ksp' version "1.8.21-1.0.11"
+    id 'org.jetbrains.kotlin.android'
+    id 'com.google.devtools.ksp' version "2.0.0-1.0.21"
+    id 'org.jetbrains.kotlin.plugin.compose'
+
 
 }
 
 
 android {
-    compileSdkVersion 33
-    buildToolsVersion '33.0.2'
+    compileSdkVersion 34
+//    buildToolsVersion '33.0.2'
 
     defaultConfig {
         applicationId "com.shevapro.filesorter"
         minSdkVersion 21
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode 5
         versionName "1.0.0"
 
@@ -47,22 +49,23 @@ android {
 
 }
 
+
 dependencies {
 
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.8.21"
-    implementation 'androidx.core:core-ktx:1.10.1'
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.9.0'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.0.0"
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     //live data
-    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.6.1"
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.8.2'
 
     // Compiler
-    implementation "androidx.compose.compiler:compiler:$compose_compiler_version"
+//    implementation "org.jetbrains.kotlin.plugin.compose:$compose_compiler_version"
 
     implementation "androidx.compose.ui:ui:$compose_version"
     // Tooling support (Previews, etc.)
@@ -75,22 +78,22 @@ dependencies {
     implementation "androidx.compose.material:material-icons-core:$compose_version"
     implementation "androidx.compose.material:material-icons-extended:$compose_version"
     // Integration with activities
-    implementation 'androidx.activity:activity-compose:1.7.2'
-    implementation("androidx.activity:activity-ktx:1.7.2")
+    implementation 'androidx.activity:activity-compose:1.9.0'
+    implementation('androidx.activity:activity-ktx:1.9.0')
 
     // Integration with ViewModels
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2'
     // Integration with observables
 //    implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
     // UI Tests
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
     //accompanist
-    implementation("com.google.accompanist:accompanist-permissions:0.31.5-beta")
+    implementation('com.google.accompanist:accompanist-permissions:0.34.0')
     implementation("androidx.documentfile:documentfile:1.0.1")
 
 
     // Room
-    def room_version = "2.5.2"
+    def room_version = '2.6.1'
 
     implementation "androidx.room:room-runtime:$room_version"
     ksp "androidx.room:room-compiler:$room_version"
