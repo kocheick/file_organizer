@@ -73,8 +73,6 @@ fun TaskItem(
                 .clip(RoundedCornerShape(40.dp))
 
                 .clickable(
-                    indication = rememberRipple(),
-                    interactionSource = MutableInteractionSource(),
                     onClick = {
                         onClick()
                     }

@@ -91,9 +91,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         -> {
                             val items = currentState.records
 
-                            if (items.isEmpty())
-                                EmptyContentScreen()
-                            else {
+
                                 val isRemovalDialogOpen = rememberSaveable { mutableStateOf(false) }
                                 Column(
                                     Modifier
@@ -101,7 +99,9 @@ fun MainScreen(viewModel: MainViewModel) {
                                     , horizontalAlignment = Alignment.CenterHorizontally){
 
                                     Stats(appStatistic = appStats)
-                                    TaskListContent(
+                                    if (items.isEmpty())
+                                        EmptyContentScreen()
+                                    else {   TaskListContent(
                                         tasksList = items,
                                         onItemClick = { clickedTask ->
                                             viewModel.onUpdateItemToEdit(clickedTask)
