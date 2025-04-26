@@ -9,7 +9,7 @@ data class UITaskRecord(
     val errorMessage:String? = null,
     val id: Int = -1
 ) {
-    fun toTaskRecord(): TaskRecord = TaskRecord(extension, source, destination, isActive,errorMessage, id)
+    fun toTaskRecord(): TaskRecord = TaskRecord(extension, source, destination, isActive, id)
 
     companion object {
         val EMPTY_OBJECT = UITaskRecord("", "", "", id = 0)

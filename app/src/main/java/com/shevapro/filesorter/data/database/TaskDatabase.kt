@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.shevapro.filesorter.model.MoveStat
 import com.shevapro.filesorter.model.TaskRecord
 
-@Database(entities = [TaskRecord::class,MoveStat::class], version = 3, exportSchema = false)
+@Database(entities = [TaskRecord::class,MoveStat::class], version = 5, exportSchema = false)
 //@TypeConverters(UriConverter::class)
 
 abstract class TaskDatabase : RoomDatabase() {
