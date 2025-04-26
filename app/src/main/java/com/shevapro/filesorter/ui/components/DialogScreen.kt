@@ -16,6 +16,7 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.shevapro.filesorter.FolderPicker
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -865,20 +866,24 @@ fun TaskFormEditor(
             onPick = {
                 if (VERSION.SDK_INT < TIRAMISU) srcLauncher.launch(permissions.toTypedArray())
                 else sourceDirectoryPickerLauncher.launch(sourcePath.value.toUri())
+            },
+            onDirectUriPick = { uri ->
+                sourcePath.value = uri
             }
         )
 
         AnimatedVisibility (typesFromSelectedSource.isNotEmpty()) {
-            Text(
+
+            Text(modifier = Modifier.padding(vertical = 8.dp),
                 maxLines = 1,
                 text =  "Pick the type of file you wish to move",
                 fontWeight = FontWeight.Medium
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
             LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 items(typesFromSelectedSource) { type ->
                     val borderBackground =  if (type == taskToBeEdited.extension) colorResource(id = R.color.fiery_rose) else Color.Unspecified
@@ -919,7 +924,9 @@ fun TaskFormEditor(
             onPick = {
                 if (VERSION.SDK_INT < TIRAMISU) destLauncher.launch(permissions.toTypedArray())
                 else destinationDirectoryPickerLauncher.launch(destPath.value.toUri())
-
+            },
+            onDirectUriPick = { uri ->
+                destPath.value = uri
             })
 
         sourcePath.value?.let { onSourceUriChange(it) }
@@ -938,14 +945,25 @@ fun permissionLauncher(
 ): ManagedActivityResultLauncher<Array<String>, Map<String, @JvmSuppressWildcards Boolean>> {
 
     val permissionState = rememberMultiplePermissionsState(permissions = permissions)
+    val context = LocalContext.current
 
     val storageAccessPermissionState =
         rememberPermissionState(permission = Manifest.permission.WRITE_EXTERNAL_STORAGE)
 
-
     val path =
         if (sourcePath.value == stringResource(id = (R.string.no_folder_selected))) Uri.EMPTY else sourcePath.value?.toUri()
 
+    // Launcher for the MANAGE_EXTERNAL_STORAGE permission intent
+    val manageExternalStorageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            directoryPickerLauncher.launch(sourcePath.value?.toUri())
+        } else {
+            // Permission denied, show a message or handle accordingly
+            println("MANAGE_EXTERNAL_STORAGE permission denied")
+        }
+    }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -956,39 +974,29 @@ fun permissionLauncher(
             }
             if (areGranted) {
                 println("Permission granted")
-
                 directoryPickerLauncher.launch(sourcePath.value?.toUri())
             } else if (permissionState.shouldShowRationale) {
                 println("Permission should show rational")
-
-//                permissionState.permissions.forEach {
-//                    it.launchPermissionRequest()
-//                }
-
             } else {
                 println("Permission not granted")
                 if (VERSION.SDK_INT >= VERSION_CODES.R) {
-                    when (storageAccessPermissionState.status) {
-                        is PermissionStatus.Granted -> {
-                            println("Permission granted here but weird")
-
-                            directoryPickerLauncher.launch(sourcePath.value?.toUri())
-                        }
-
-                        is PermissionStatus.Denied -> {
-                            println("Permission denied --> launching perm. request")
-
-                            storageAccessPermissionState.launchPermissionRequest()
-                            permissionState.launchMultiplePermissionRequest()
-
-                        }
+                    // For Android 11 (R) and above, we need to request MANAGE_EXTERNAL_STORAGE permission
+                    try {
+                        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                        val uri = Uri.fromParts("package", context.packageName, null)
+                        intent.data = uri
+                        manageExternalStorageLauncher.launch(intent)
+                    } catch (e: Exception) {
+                        // If the specific intent is not available, fall back to the general storage settings
+                        val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                        manageExternalStorageLauncher.launch(intent)
                     }
-                } else permissionState.launchMultiplePermissionRequest()
-//                directoryPickerLauncher.launch(sourcePath.value?.toUri())
-
+                } else {
+                    // For Android 10 and below, use the regular permission request
+                    permissionState.launchMultiplePermissionRequest()
+                }
             }
             println("is it back to granted $areGranted ${permissionMap.values.reduce { acc, next -> acc && next }}")
-
         })
 
     return launcher
@@ -1041,8 +1049,11 @@ private fun SwapPathsButton(
 private fun FolderPickerButton(
     text: String,
     path: String,
-    onPick: () -> Unit
+    onPick: () -> Unit,
+    onDirectUriPick: ((String) -> Unit)? = null
 ) {
+    val context = LocalContext.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1056,7 +1067,19 @@ private fun FolderPickerButton(
                 .defaultMinSize(minWidth = 110.dp)
                 .padding(end = 8.dp),
             onClick = {
-                onPick()
+                // Use FolderPicker directly instead of the default Android picker
+                if (onDirectUriPick != null) {
+                    FolderPicker.showFolderPickerDialog(context) { uri ->
+                        // After getting the URI, we need to process it like the original onPick would
+                        // This ensures permissions are handled correctly
+                        grantUrisPermissions(uri.toUri(), context = context)
+                        // Update the path state directly
+                        onDirectUriPick(uri)
+                    }
+                } else {
+                    // Fall back to the original onPick if onDirectUriPick is not provided
+                    onPick()
+                }
             },
             colors = ButtonDefaults
                 .buttonColors(
@@ -1162,4 +1185,3 @@ fun checkAndRequestFileStoragePermission(
         ActivityCompat.requestPermissions(context, arrayOf(permission), 0)
     }
 }
-

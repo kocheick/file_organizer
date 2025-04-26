@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -28,11 +29,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shevapro.filesorter.*
 import com.shevapro.filesorter.R
+import com.shevapro.filesorter.Utility
 import com.shevapro.filesorter.Utility.emptyInteractionSource
 import com.shevapro.filesorter.model.AppExceptions
 import com.shevapro.filesorter.model.AppStatistic
 import com.shevapro.filesorter.model.UITaskRecord
 import com.shevapro.filesorter.model.UiState
+import com.shevapro.filesorter.ui.getActivity
 import com.shevapro.filesorter.ui.theme.AppTheme
 import com.shevapro.filesorter.ui.viewmodel.MainViewModel
 
@@ -45,8 +48,8 @@ fun MainScreen(viewModel: MainViewModel) {
     val itemCount =
         remember(mainState) { if (mainState is UiState.Data) (mainState as UiState.Data).records.size else 0 }
 
-    val isAddDialogOpen by viewModel.isAddDialogpOpen.collectAsState()
-    val isEditDialogOpen by viewModel.isEditDialogpOpen.collectAsState()
+    val isAddDialogOpen by viewModel.isAddDialogOpen.collectAsState()
+    val isEditDialogOpen by viewModel.isEditDialogOpen.collectAsState()
 
 
 //    var itemToEdit: UITaskRecord? by remember { mutableStateOf(null) }
@@ -57,6 +60,29 @@ fun MainScreen(viewModel: MainViewModel) {
     val foundExtensions : List<String> by viewModel.foundExtensions.collectAsState()
 
     val appStats: AppStatistic by viewModel.appStats.collectAsState()
+
+    // Check for storage permissions on Android 29+
+    val context = LocalContext.current
+    val activity = context.getActivity()
+    val showStoragePermissionDialog = remember { mutableStateOf(false) }
+
+    // Check if we need to show the storage permission dialog
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && activity != null) {
+            if (!Utility.hasPermission(context)) {
+                showStoragePermissionDialog.value = true
+            }
+        }
+    }
+
+    // Show the storage permission dialog if needed
+    if (showStoragePermissionDialog.value) {
+        StoragePermissionDialog(
+            onDismiss = {
+                showStoragePermissionDialog.value = false
+            }
+        )
+    }
 
 
 
@@ -119,7 +145,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
 
                                 AnimatedVisibility(
-                                    isEditDialogOpen && itemToEdit != null
+                                    visible = isEditDialogOpen && itemToEdit != null
                                 ) {
                                     EditDialog(
                                         itemToBeEdited = itemToEdit ?: return@AnimatedVisibility,
@@ -127,11 +153,12 @@ fun MainScreen(viewModel: MainViewModel) {
                                         onSaveUpdates = { viewModel.onUpdateItemToEdit(it) },
                                         onDismiss = {
                                             viewModel.closeEditDialog()
-                                        }, onReadErrorMessageForTask = {viewModel.dissmissErrorMessageForTask(it)})
+                                        }, 
+                                        onReadErrorMessageForTask = { viewModel.dismissErrorMessageForTask(it) })
                                 }
 
                                 if (isRemovalDialogOpen.value && itemToRemove != null) AnimatedVisibility(
-                                    isRemovalDialogOpen.value
+                                    visible = isRemovalDialogOpen.value
                                 ) {
                                     RemovalDialog(
                                         item = itemToRemove ?: return@AnimatedVisibility,
@@ -158,7 +185,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     }
 
 
-                    AnimatedVisibility(isAddDialogOpen) {
+                    AnimatedVisibility(visible = isAddDialogOpen) {
                         AddTaskDialog(onAddItem = { extension, src, dest ->
                             viewModel.addNewItemWith(extension, src, dest)
 
@@ -180,7 +207,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             },
                             foundExtensions = foundExtensions )
                     }
-                    if (mainState is UiState.Data) AnimatedVisibility((mainState as UiState.Data).exception != null) {
+                    if (mainState is UiState.Data) AnimatedVisibility(visible = (mainState as UiState.Data).exception != null) {
                         when (val exception = (mainState as UiState.Data).exception) {
 
                             is AppExceptions.MissingFieldException -> {
@@ -218,7 +245,9 @@ fun MainScreen(viewModel: MainViewModel) {
                                     uri = exception.errorMessage.substringBefore(" from")
                                         ?.substringAfter("content://") ?: "", onAuthorize = {
 
-                                    }, onDismiss = {})
+                                    }, onDismiss = {
+                                        viewModel.dismissError()
+                                    })
                             }
 
                             is AppExceptions.UnknownError -> {
