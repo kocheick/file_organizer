@@ -52,6 +52,15 @@ android {
 
 dependencies {
 
+    // Koin for Dependency Injection
+    def koin_version = '3.5.3'
+    implementation "io.insert-koin:koin-android:$koin_version"
+    implementation "io.insert-koin:koin-androidx-compose:$koin_version"
+    testImplementation "io.insert-koin:koin-test:$koin_version"
+    testImplementation "io.insert-koin:koin-test-junit4:$koin_version"
+
+    // File/Folder Picker
+    implementation 'com.github.codekidX:storage-chooser:2.0.4.4'
 
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.1.20'
     implementation 'androidx.core:core-ktx:1.16.0'
