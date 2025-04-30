@@ -1,321 +1,237 @@
 package com.shevapro.filesorter.ui.viewmodel
 
 import android.app.Application
-import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.lifecycle.*
-import com.shevapro.filesorter.Utility
-import com.shevapro.filesorter.Utility.AVERAGE_MANUAL_FILE_MOVE_PER_SECOND
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.shevapro.filesorter.data.repository.Repository
 import com.shevapro.filesorter.model.AppExceptions
-import com.shevapro.filesorter.model.AppStatistic
-import com.shevapro.filesorter.model.MostUsed
 import com.shevapro.filesorter.model.PermissionExceptionForUri
-import com.shevapro.filesorter.model.TaskRecord
-import com.shevapro.filesorter.model.TaskRecord.Companion.EMPTY_ITEM
+import com.shevapro.filesorter.model.TaskStats
 import com.shevapro.filesorter.model.UITaskRecord
 import com.shevapro.filesorter.model.UiState
 import com.shevapro.filesorter.service.FileMover
 import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
+/**
+ * Main ViewModel that coordinates between specialized ViewModels.
+ * This class delegates to TaskViewModel, StatsViewModel, and SettingsViewModel.
+ */
 class MainViewModel(
     private val app: Application,
     private val repository: Repository,
-    private val fileMover: FileMover,
-) :
-    AndroidViewModel(app) {
+    private val fileMover: FileMover
+) : AndroidViewModel(app) {
 
+    // Specialized ViewModels
+    private val taskViewModel = TaskViewModel(app, repository)
+    private val statsViewModel = StatsViewModel(app, fileMover)
+    private val settingsViewModel = SettingsViewModel(app)
 
-    private val DELAY_TIME: Long = 2800
-    private var     _tasks: MutableList<TaskRecord> = mutableListOf()
-    private val uiTasks: List<UITaskRecord> get() = _tasks.map { it.toUITaskRecord() }
-
-    private val _state: MutableStateFlow<UiState> = MutableStateFlow(UiState.Loading)
+    // State management
+    private val _state: MutableStateFlow<UiState> = MutableStateFlow(UiState.Data(emptyList()))
     val mainState = _state.asStateFlow()
 
-//    private val _hasError: MutableStateFlow<Boolean> = MutableStateFlow(false)
-//    val hasError = _hasError.asStateFlow()
-//
-//    private val _errorMessage: MutableStateFlow<String> = MutableStateFlow("")
-//    val errorMessage = _errorMessage.asStateFlow()
-
-    val coroutineExceptionHandler = CoroutineExceptionHandler { _, exception ->
-//        _hasError.value = true
-
-
-        _state.value = UiState.Data(
-            uiTasks,
-            AppExceptions.UnknownError(exception.message ?: "An error occured while processing..")
-        )
-
-
-    }
-
-    private fun askPermissionForUri(uri: Uri?) {
-
-    }
-
-
-    private var _itemToEdit: MutableStateFlow<UITaskRecord?> = MutableStateFlow(null)
-    val itemToEdit = _itemToEdit.asStateFlow()
-    private var _itemToRemove: MutableStateFlow<UITaskRecord?> = MutableStateFlow(null)
-    val itemToRemove get() =  _itemToRemove.asStateFlow()
-    private var _itemToAdd: MutableStateFlow<UITaskRecord?> = MutableStateFlow(null)
-    val itemToAdd get() =  _itemToAdd.asStateFlow()
-
-    private var _isAddDialogpOpen: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isAddDialogpOpen get() =  _isAddDialogpOpen.asStateFlow()
-
-    private var _isEditDialogpOpen: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isEditDialogpOpen = _isEditDialogpOpen
-        .asStateFlow()
-
-    private var _appStats: MutableStateFlow<AppStatistic> = MutableStateFlow(AppStatistic())
-
-    val appStats get() =  _appStats.asStateFlow()
-
-    private var _foundExtensions: MutableStateFlow<List<String>> = MutableStateFlow(emptyList())
-    val foundExtensions get() =  _foundExtensions.asStateFlow()
-
-
-
     init {
-        wtihBlankSamples()
-        initMainScreen()
-
-    }
-
-    private fun wtihBlankSamples() {
-//        deleteAll()
-//        var count = 0
-//        repeat(15){
-//            viewModelScope.launch{ repository.addTask(TaskRecord.EMPTY_ITEM) }
-//        }
-    }
-
-    fun openAddDialog() {
-        _isAddDialogpOpen.update { true }
-    }
-
-    fun closeAddDialog() {
-        _isAddDialogpOpen.update { false }
-    }
-
-    fun openEditDialog() {
-        _isEditDialogpOpen.update { true }
-    }
-
-    fun closeEditDialog() {
-        _isEditDialogpOpen.update { false }
-    }
-
-    fun dismissError() {
-        _state.update {
-            (it as UiState.Data).copy(exception = null)
-        }
-//        _hasError.value = false
-//        _errorMessage.value = ""
-//        initTasks()
-    }
-
-    fun onUpdateItemToEdit(item: UITaskRecord?) {
-        _itemToEdit.value = item
-    }
-
-    fun onUpdateItemToAdd(item: UITaskRecord?) {
-        _itemToAdd.value = item
-    }
-
-    fun onUpdateItemToRemove(item: UITaskRecord?) {
-        _itemToRemove.value = item
-    }
-
-    private fun initMainScreen() {
-        _state.value = UiState.Loading
-        viewModelScope.launch(Dispatchers.Unconfined + coroutineExceptionHandler) {
-            //  for (i in  samples) addTask(i)
-//            throw Exception("BOOM MISTAKE")
-
-
-            repository.getTasks().stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(), mutableListOf()
-            ).collect { t ->
-                _tasks = t.toMutableList()
-                _state.value = UiState.Data(uiTasks)
-
-
-            }
-        }
-
+        // Initialize the state with data from the TaskViewModel
         viewModelScope.launch {
-//            fileMover.resetStats()
-            fileMover.getStats().stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(), mutableListOf()
-            ).collect { list ->
-                if (list.isNotEmpty()) {
-                    val numberOfFilesMoved = list.sumOf { it.numberOfFileMoved }
-                    val mostMovedFileByType: String =
-                        list.groupBy { it.extension }.mapValues { it.value.size }
-                            .maxBy { it.value }.key
-                    val topSource: String = list.groupBy { it.source }.mapValues { it.value.size }
-                        .maxBy { it.value }.key
-                    val topDestination: String =
-                        list.groupBy { it.target }.mapValues { it.value.size }
-                            .maxBy { it.value }.key
-
-                    val approxTimeSaved =
-                        (numberOfFilesMoved * AVERAGE_MANUAL_FILE_MOVE_PER_SECOND).roundToInt()
-                    val item = AppStatistic(
-                        numberOfFilesMoved,
-                        MostUsed(
-                            Utility.formatUriToUIString(
-                                Uri.decode(topSource)
-                            ),
-                            Utility.formatUriToUIString(Uri.decode(topDestination)),
-                            mostMovedFileByType
-                        ), timeSavedInMinutes = approxTimeSaved
-                    )
-
-                    _appStats.value = item
-                }
+            taskViewModel.mainState.collect { state ->
+                _state.value = state
             }
-
         }
     }
 
-    //        deleteAll()
-    fun getTaskById(id: Int): TaskRecord {
-        var task: TaskRecord = EMPTY_ITEM
-        viewModelScope.launch(IO) {
-            task = repository.getTaskbyId(id) ?: return@launch
-        }
+    // Extensions for file selection
+    private var _foundExtensions: MutableStateFlow<List<String>> = MutableStateFlow(emptyList())
+    val foundExtensions get() = _foundExtensions.asStateFlow()
 
-        return task
-
+    // Exception handling
+    val coroutineExceptionHandler = CoroutineExceptionHandler { _, exception ->
+        _state.value = UiState.Data(
+            taskViewModel.mainState.value.let {
+                if (it is UiState.Data) it.records else emptyList()
+            },
+            AppExceptions.UnknownError(exception.message ?: "An error occurred while processing..")
+        )
     }
 
+    // Delegate properties to TaskViewModel
+    val itemToEdit get() = taskViewModel.itemToEdit
+    val itemToRemove get() = taskViewModel.itemToRemove
+    val itemToAdd get() = taskViewModel.itemToAdd
+    val isAddDialogOpen get() = taskViewModel.isAddDialogOpen
+    val isEditDialogOpen get() = taskViewModel.isEditDialogOpen
+
+    // Delegate properties to StatsViewModel
+    val appStats get() = statsViewModel.appStats
+
+    // Delegate properties to SettingsViewModel
+    val darkModeEnabled get() = settingsViewModel.darkModeEnabled
+    val notificationsEnabled get() = settingsViewModel.notificationsEnabled
+    val autoSortEnabled get() = settingsViewModel.autoSortEnabled
+    val defaultSourceDirectory get() = settingsViewModel.defaultSourceDirectory
+    val defaultDestinationDirectory get() = settingsViewModel.defaultDestinationDirectory
+
+    /**
+     * Dismisses the current error.
+     */
+    fun dismissError() {
+        taskViewModel.dismissError()
+    }
+
+    /**
+     * Updates the item to edit.
+     *
+     * @param item The item to edit
+     */
+    fun onUpdateItemToEdit(item: UITaskRecord?) {
+        taskViewModel.onUpdateItemToEdit(item)
+    }
+
+    /**
+     * Updates the item to add.
+     *
+     * @param item The item to add
+     */
+    fun onUpdateItemToAdd(item: UITaskRecord?) {
+        taskViewModel.onUpdateItemToAdd(item)
+    }
+
+    /**
+     * Updates the item to remove.
+     *
+     * @param item The item to remove
+     */
+    fun onUpdateItemToRemove(item: UITaskRecord?) {
+        taskViewModel.onUpdateItemToRemove(item)
+    }
+
+    /**
+     * Opens the add dialog.
+     */
+    fun openAddDialog() {
+        taskViewModel.openAddDialog()
+    }
+
+    /**
+     * Closes the add dialog.
+     */
+    fun closeAddDialog() {
+        taskViewModel.closeAddDialog()
+    }
+
+    /**
+     * Opens the edit dialog.
+     */
+    fun openEditDialog() {
+        taskViewModel.openEditDialog()
+    }
+
+    /**
+     * Closes the edit dialog.
+     */
+    fun closeEditDialog() {
+        taskViewModel.closeEditDialog()
+    }
+
+    /**
+     * Adds a new task with the specified parameters.
+     *
+     * @param extension The file extension
+     * @param source The source directory
+     * @param destination The destination directory
+     */
     fun addNewItemWith(extension: String, source: String, destination: String) {
-        when {
-            extension.isEmpty() -> {
-                _state.value = UiState.Data(
-                    uiTasks,
-                    AppExceptions.MissingFieldException("Please, verify type input is not empty.")
-                )
-            }
-
-            source.isEmpty() -> {
-                _state.value = UiState.Data(
-                    uiTasks,
-                    AppExceptions.MissingFieldException("Please, verify a source folder has been selected.")
-                )
-
-            }
-
-            destination.isEmpty() -> {
-                _state.value = UiState.Data(
-                    uiTasks,
-                    AppExceptions.MissingFieldException("Please, verify a destination folder has been selected.")
-                )
-
-            }
-
-            else -> {
-                closeAddDialog()
-                viewModelScope.launch(IO + coroutineExceptionHandler) {
-
-
-                    repository.addTask(
-                        EMPTY_ITEM.copy(
-                            extension = extension,
-                            source = source,
-                            destination = destination,
-                            isActive = true
-                        )
-                    )
-                    _itemToAdd.update { null }
-
-
-                }
-
-            }
-        }
-
-
+        taskViewModel.addNewItemWith(extension, source, destination)
     }
 
+    /**
+     * Updates an existing task.
+     *
+     * @param itemToBeUpdated The task to update
+     */
     fun updateItem(itemToBeUpdated: UITaskRecord) {
-
-        when {
-            itemToBeUpdated.extension.isEmpty() -> {
-                _state.value = UiState.Data(
-                    uiTasks,
-                    AppExceptions.MissingFieldException("Please, verify type input is not empty.")
-                )
-            }
-
-            itemToBeUpdated.source.isEmpty() -> {
-                _state.value = UiState.Data(
-                    uiTasks,
-                    AppExceptions.MissingFieldException("Please, verify a source folder has been selected.")
-                )
-
-            }
-
-            itemToBeUpdated.destination.isEmpty() -> {
-                _state.value = UiState.Data(
-                    uiTasks,
-                    AppExceptions.MissingFieldException("Please, verify a destination folder has been selected.")
-                )
-
-            }
-
-            else -> {
-
-                viewModelScope.launch(IO + coroutineExceptionHandler) {
-                    val old = getTaskById(itemToBeUpdated.id)
-                    println("updating item ${itemToBeUpdated.id} from  $old to ${itemToBeUpdated}")
-                    closeEditDialog()
-                    repository.updateTask(itemToBeUpdated.toTaskRecord())
-
-
-                }
-            }
-        }
-
-
+        taskViewModel.updateItem(itemToBeUpdated)
     }
 
-    fun removeItem(itemToBeDeleted: UITaskRecord) =
-        viewModelScope.launch(IO + coroutineExceptionHandler) {
-            repository.deleteTask(itemToBeDeleted.toTaskRecord())
-        }
+    /**
+     * Removes a task.
+     *
+     * @param itemToBeDeleted The task to remove
+     */
+    fun removeItem(itemToBeDeleted: UITaskRecord) {
+        taskViewModel.removeItem(itemToBeDeleted)
+    }
 
-    fun deleteAll() =
-        viewModelScope.launch(IO + coroutineExceptionHandler) { repository.deleteAll() }
+    /**
+     * Deletes all tasks.
+     */
+    fun deleteAll() {
+        taskViewModel.deleteAll()
+    }
 
-    @RequiresApi(Build.VERSION_CODES.R)
+    /**
+     * Toggles the active state of a task.
+     *
+     * @param itemToBeToggled The task to toggle
+     */
+    fun toggleStateFor(itemToBeToggled: UITaskRecord) {
+        taskViewModel.toggleStateFor(itemToBeToggled)
+    }
+
+    /**
+     * Dismisses the error message for a task.
+     *
+     * @param id The task ID
+     */
+    fun dismissErrorMessageForTask(id: Int) {
+        taskViewModel.dismissErrorMessageForTask(id)
+    }
+
+    /**
+     * Gets file extensions for a new source directory.
+     *
+     * @param folder The source directory
+     */
+    fun getExtensionsForNewSource(folder: String) {
+        val extensions = fileMover.getFilesExtensionsForFolder(folder, app)
+        _foundExtensions.value = extensions
+    }
+
+    /**
+     * Gets file extensions for a previous source directory.
+     *
+     * @param folder The source directory
+     * @return List of file extensions
+     */
+    fun getExtensionsForPreviousSource(folder: String): List<String> = 
+        fileMover.getFilesExtensionsForFolder(folder, app)
+
+    /**
+     * Sorts files according to active tasks.
+     */
     fun sortFiles() {
         _state.value = UiState.Loading
 
-        val items = _tasks.filter { it.isActive && it.errorMessage.isNullOrEmpty() }
+        val items: List<UITaskRecord> = taskViewModel.mainState.value.let { state ->
+            if (state is UiState.Data) {
+                state.records.filter { task -> task.isActive && task.errorMessage.isNullOrEmpty() }
+            } else {
+                emptyList<UITaskRecord>()
+            }
+        }
+
         println("VIEWMODEL : action processing ${items.size} items")
 
         if (items.isNotEmpty()) {
             viewModelScope.launch(IO + coroutineExceptionHandler) {
-                delay(DELAY_TIME)
+                delay(2800) // Delay for UI feedback
 
                 items.forEach { task ->
                     println("VIEWMODEL : processing with ext ${task.extension}")
@@ -323,66 +239,80 @@ class MainViewModel(
                         fileMover.moveFilesByType(
                             task.source,
                             task.destination,
-                            task.extension.lowercase().trim(), context = app,
-                            { progress -> _state.value = UiState.Processing(progress) },
-
-                            )
+                            task.extension.lowercase().trim(), 
+                            context = app,
+                            { progress -> _state.value = UiState.Processing(progress) }
+                        )
                     } catch (e: PermissionExceptionForUri) {
-                        viewModelScope.launch { repository.updateTask(task.copy(errorMessage = e.message)) }
+                        viewModelScope.launch { 
+                            taskViewModel.dismissErrorMessageForTask(task.id)
+                        }
                         sortFiles()
                     }
 
-
-//                    fileMover.moveFilesWithExtension(app,
-//                        Uri.parse(task.source),
-//                        task.destination.toUri(),
-//                        task.extension.lowercase().trim()
-//                    )
-//                    fileMover.moveFiles(
-//                        task.source,
-//                        task.destination,
-//                        task.extension.lowercase().trim()
-//                    )
-//                    val sourceFiles =
-//                        withContext(Dispatchers.IO) { (fileMover.getFiles(task.from, task.type)) }
-//                    println(sourceFiles)
-//
-//                    withContext(Dispatchers.IO) {
-//                        sourceFiles.forEach {
-//                            fileMover.moveFile(it, task.to)
-//                        }
-//                    }
-
-                    _state.value = UiState.Data(uiTasks, null)
+                    _state.value = UiState.Data(
+                        taskViewModel.mainState.value.let { state ->
+                            if (state is UiState.Data) state.records else emptyList<UITaskRecord>()
+                        },
+                        null
+                    )
                 }
             }
         }
-//            initTasksΩΩTasks()
     }
 
-    fun toggleStateFor(itemToBeToggled: UITaskRecord) {
-        viewModelScope.launch(IO + coroutineExceptionHandler) {
-            repository.updateTask(
-                itemToBeToggled.toTaskRecord().copy(isActive = !itemToBeToggled.isActive)
-            )
+    /**
+     * Toggles dark mode.
+     */
+    fun toggleDarkMode() {
+        settingsViewModel.toggleDarkMode()
+    }
+
+    /**
+     * Toggles notifications.
+     */
+    fun toggleNotifications() {
+        settingsViewModel.toggleNotifications()
+    }
+
+    /**
+     * Toggles auto sort.
+     */
+    fun toggleAutoSort() {
+        settingsViewModel.toggleAutoSort()
+    }
+
+    /**
+     * Sets the default source directory.
+     *
+     * @param directory The directory path
+     */
+    fun setDefaultSourceDirectory(directory: String?) {
+        settingsViewModel.setDefaultSourceDirectory(directory)
+    }
+
+    /**
+     * Sets the default destination directory.
+     *
+     * @param directory The directory path
+     */
+    fun setDefaultDestinationDirectory(directory: String?) {
+        settingsViewModel.setDefaultDestinationDirectory(directory)
+    }
+
+    /**
+     * Resets all settings to default values.
+     */
+    fun resetSettings() {
+        settingsViewModel.resetSettings()
+    }
+
+    /**
+     * Resets statistics.
+     */
+    fun resetStats() {
+        viewModelScope.launch {
+            statsViewModel.resetStats()
         }
     }
-
-    fun dissmissErrorMessageForTask(id: Int) =
-        viewModelScope.launch(IO + coroutineExceptionHandler) {
-            val item = _tasks.first { it.id == id }.copy(errorMessage = null)
-            _itemToEdit.value = item.toUITaskRecord()
-            repository.updateTask(item)
-        }
-
-    fun getExtensionsForNewSource(folder:String) {
-        val extensions = fileMover.getFilesExtensionsForFolder(folder, app)
-        _foundExtensions.value = extensions
-    }
-    fun getExtensionsForPreviousSource(folder:String): List<String> = fileMover.getFilesExtensionsForFolder(folder, app)
-
-
-
-
-
 }
