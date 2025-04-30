@@ -1,0 +1,50 @@
+{
+  "rules": [
+    "# Project Overview",
+    "Project is an Android File Organizer app that helps users organize files by automatically moving them to designated folders based on file extensions",
+    "Follow MVVM architecture pattern with clear separation of concerns between View, ViewModel, and Model layers",
+    "Adhere to Single Responsibility Principle - break large classes into smaller, focused components",
+    
+    "# Architecture & Structure",
+    "Organize service layer into specialized services (FileOperationService, ValidationService, etc.)",
+    "Use dependency injection with Koin for ViewModels, repositories, and services",
+    "Ensure repository classes handle all data operations and provide clean APIs to ViewModels",
+    
+    "# Asynchronous Operations",
+    "Never use runBlocking in any UI-related code",
+    "Use Kotlin coroutines with appropriate dispatchers (IO for file operations, Default for CPU-intensive work)",
+    "Prefer StateFlow over LiveData for UI state management",
+    "Handle errors within coroutineExceptionHandler and propagate them to the UI as part of state",
+    
+    "# UI Guidelines",
+    "Follow Material Design 2 guidelines and components for consistent UI",
+    "Don't hardcode dp values - use dimension resources",
+    "Extract reusable composables from large UI components to improve maintainability",
+    "Ensure all UI elements have appropriate content descriptions for accessibility",
+    "Support both light and dark themes with proper theming",
+    
+    "# File Operations",
+    "Perform all file operations off the main thread using IO dispatcher",
+    "Provide progress updates for long-running file operations",
+    "Handle Android storage permissions appropriately, especially for API 29+ (Android 10)",
+    "Properly dispose of resources after file operations to prevent memory leaks",
+    "Implement proper error handling for all file operations (permission issues, insufficient storage, etc.)",
+    
+    "# Data Models",
+    "Use Room for local data persistence",
+    "When using Retrofit, apply @SerializedName annotations for data classes to handle obfuscation",
+    "Keep data models focused and specific to their domain (TaskRecord, UITaskRecord, etc.)",
+    "Use data classes for models with clear distinction between database entities and UI models",
+    
+    "# Testing",
+    "Write unit tests for ViewModels, repositories, and service classes",
+    "Use fake implementations for testing dependencies",
+    "Test critical file operations with different scenarios (empty folders, large files, etc.)",
+    
+    "# Performance",
+    "Use LazyColumn for lists that might contain many items",
+    "Implement pagination for large file lists",
+    "Optimize file operations with buffered streams",
+    "Cache file extension lists to avoid repeated directory scans"
+  ]
+}
