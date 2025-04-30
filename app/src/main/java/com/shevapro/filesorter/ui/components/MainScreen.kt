@@ -47,7 +47,11 @@ import com.shevapro.filesorter.ui.viewmodel.MainViewModel
 
 
 @Composable
-fun MainScreen(viewModel: MainViewModel) {
+fun MainScreen(
+    viewModel: MainViewModel,
+    onNavigateToAddTask: () -> Unit = {},
+    onNavigateToEditTask: (UITaskRecord) -> Unit = {}
+) {
 
     val mainState: UiState by viewModel.mainState.collectAsState()
     val itemCount =
@@ -79,8 +83,7 @@ fun MainScreen(viewModel: MainViewModel) {
             floatingActionButton = {
                 ActionButtonsComponent(itemCount = itemCount,
                     onAddNewTaskItem = {
-                        viewModel.openAddDialog()
-                        if (itemToAdd == null) viewModel.onUpdateItemToAdd(UITaskRecord.EMPTY_OBJECT)
+                        onNavigateToAddTask()
                     },
 
                     onExecuteTasksClicked = {
@@ -116,8 +119,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                     else {   TaskListContent(
                                         tasksList = items,
                                         onItemClick = { clickedTask ->
-                                            viewModel.onUpdateItemToEdit(clickedTask)
-                                            viewModel.openEditDialog()
+                                            onNavigateToEditTask(clickedTask)
                                         },
                                         onRemoveItem = { itemToBeRemoved ->
                                             viewModel.onUpdateItemToRemove(itemToBeRemoved)
@@ -130,18 +132,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
 
 
-                                AnimatedVisibility(
-                                    visible = isEditDialogOpen && itemToEdit != null
-                                ) {
-                                    EditTaskDialog(
-                                        itemToBeEdited = itemToEdit ?: return@AnimatedVisibility,
-                                        onUpdateItem = { viewModel.updateItem(it) },
-                                        onSaveUpdates = { viewModel.onUpdateItemToEdit(it) },
-                                        onDismiss = {
-                                            viewModel.closeEditDialog()
-                                        },
-                                        onReadErrorMessageForTask = { viewModel.dismissErrorMessageForTask(it) })
-                                }
+                                // Edit dialog replaced with navigation to edit screen
 
                                 if (isRemovalDialogOpen.value && itemToRemove != null) AnimatedVisibility(
                                     visible = isRemovalDialogOpen.value
@@ -171,27 +162,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     }
 
 
-                    AnimatedVisibility(visible = isAddDialogOpen) {
-                        AddTaskDialog(onAddItem = { extension, src, dest ->
-                            viewModel.addNewItemWith(extension, src, dest)
-
-                        },
-                            onSaveUpdates = {
-                                viewModel.onUpdateItemToAdd(it)
-                            },
-
-                            item = itemToAdd ?: return@AnimatedVisibility,
-                            onDismiss = {
-                                viewModel.closeAddDialog()
-                            },
-                            onSourceSelected = {
-                                    viewModel.getExtensionsForNewSource(
-                                        it
-                                    )
-
-                            },
-                            foundExtensions = foundExtensions )
-                    }
+                    // Add dialog replaced with navigation to add screen
                     if (mainState is UiState.Data) AnimatedVisibility(visible = (mainState as UiState.Data).exception != null) {
                         when (val exception = (mainState as UiState.Data).exception) {
 
