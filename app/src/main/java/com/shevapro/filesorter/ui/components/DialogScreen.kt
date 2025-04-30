@@ -16,7 +16,7 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import com.shevapro.filesorter.FolderPicker
+import com.shevapro.filesorter.FolderPickerNew
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -212,7 +212,7 @@ fun AddTaskDialog(
 @Composable
 fun NewTaskFormPreview() {
     val previewTask = UITaskRecord(
-        "mp3", "content://com.andråçoid.externalstorage.documents/tree/primary:Pictures",
+        "mp3", "content://com.android.externalstorage.documents/tree/primary:Pictures",
         "content://com.android.externalstorage.documents/tree/primary:Music"
     )
 
@@ -755,7 +755,7 @@ fun TaskForm(
             path = formattedSource.ifBlank { stringResource(R.string.no_folder_selected) },
             onPick = {
                 if (VERSION.SDK_INT < TIRAMISU) srcLauncher.launch(permissions.toTypedArray())
-                else sourceDirectoryPickerLauncher.launch(sourcePath.value.toUri())
+                 sourceDirectoryPickerLauncher.launch(sourcePath.value.toUri())
             }
         )
         // SWAP BUTTON
@@ -881,7 +881,9 @@ fun TaskFormEditor(
             )
 
             LazyRow(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1069,12 +1071,12 @@ private fun FolderPickerButton(
             onClick = {
                 // Use FolderPicker directly instead of the default Android picker
                 if (onDirectUriPick != null) {
-                    FolderPicker.showFolderPickerDialog(context) { uri ->
+                    FolderPickerNew.showFolderPicker(context, null) { uri ->
                         // After getting the URI, we need to process it like the original onPick would
                         // This ensures permissions are handled correctly
-                        grantUrisPermissions(uri.toUri(), context = context)
+                        grantUrisPermissions(uri, context = context)
                         // Update the path state directly
-                        onDirectUriPick(uri)
+                        onDirectUriPick(uri.toString())
                     }
                 } else {
                     // Fall back to the original onPick if onDirectUriPick is not provided
@@ -1117,14 +1119,10 @@ fun pickDirectory(pickedUri: (String) -> Unit): ManagedActivityResultLauncher<Ur
 
             result?.let {
 //                Intent.createChooser(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE),"")
-                println("your URI path: ${it.path}")
-                println("your URI encoded path: ${it.encodedPath}")
-                println("your URI path fragments: ${it.pathSegments}")
-                println("your URI scheme: ${it.scheme}")
-                println("your URI authority: ${it.authority}")
-                println("your URI encoded authority: ${it.encodedAuthority}")
-                println("your URI full: ${Uri.decode(it.toString())}")
-                println("decode: ${Uri.decode(it.toString())}")
+                println("URI details: path=${it.path}, encodedPath=${it.encodedPath}, " +
+                        "fragments=${it.pathSegments}, scheme=${it.scheme}, authority=${it.authority}," +
+                        " encodedAuthority=${it.encodedAuthority}, full=${Uri.decode(it.toString())}, " +
+                        "decoded=${Uri.decode(it.toString())}")
                 println("tostring : ${(it.toString())}")
                 grantUrisPermissions(it, context = context)
                 pickedUri((it.toString()))
