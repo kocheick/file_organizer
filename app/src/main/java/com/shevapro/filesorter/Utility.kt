@@ -51,6 +51,29 @@ object Utility {
         if (isRoot(uri)) return "Primary Root"
 
         val decodedUri = Uri.decode(uri)
+
+        // Handle file:/// URIs (new format from external library)
+        if (decodedUri.startsWith("file:///")) {
+            // Extract the path part after file:///
+            val path = decodedUri.substringAfter("file:///")
+
+            // Handle /sdcard/ paths (which are symlinks to /storage/emulated/0/)
+            if (path.startsWith("sdcard/")) {
+                val pathSegments = path.substringAfter("sdcard/").split("/")
+
+                // If it's a direct child of the root (like Download, DCIM, etc.)
+                if (pathSegments.size == 1 || (pathSegments.size > 1 && pathSegments[1].isEmpty())) {
+                    return pathSegments[0]
+                }
+
+                // For nested folders, show the hierarchy
+                return pathSegments.filter { it.isNotEmpty() }.joinToString(" > ")
+            }
+
+            // For other file:/// paths, show the path without the file:/// prefix
+            return path.split("/").filter { it.isNotEmpty() }.joinToString(" > ")
+        }
+
         val formattedUri = formatUri(decodedUri)
 
         // Check if this is a top-level folder in storage/emulated/0
