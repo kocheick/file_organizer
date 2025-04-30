@@ -35,12 +35,17 @@ import com.shevapro.filesorter.model.AppExceptions
 import com.shevapro.filesorter.model.AppStatistic
 import com.shevapro.filesorter.model.UITaskRecord
 import com.shevapro.filesorter.model.UiState
+import com.shevapro.filesorter.ui.components.dialog.AddTaskDialog
+import com.shevapro.filesorter.ui.components.dialog.EditTaskDialog
+import com.shevapro.filesorter.ui.components.dialog.RemovalDialog
+import com.shevapro.filesorter.ui.components.main.ActionButtonsComponent
+import com.shevapro.filesorter.ui.components.main.EmptyContentComponent
+import com.shevapro.filesorter.ui.components.main.HeaderComponent
 import com.shevapro.filesorter.ui.getActivity
 import com.shevapro.filesorter.ui.theme.AppTheme
 import com.shevapro.filesorter.ui.viewmodel.MainViewModel
 
 
-@RequiresApi(Build.VERSION_CODES.R)
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
 
@@ -61,37 +66,18 @@ fun MainScreen(viewModel: MainViewModel) {
 
     val appStats: AppStatistic by viewModel.appStats.collectAsState()
 
-    // Check for storage permissions on Android 29+
+    // We no longer check for storage permissions at app startup
+    // Instead, permissions are requested when the user selects a folder
     val context = LocalContext.current
-    val activity = context.getActivity()
-    val showStoragePermissionDialog = remember { mutableStateOf(false) }
-
-    // Check if we need to show the storage permission dialog
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && activity != null) {
-            if (!Utility.hasPermission(context)) {
-                showStoragePermissionDialog.value = true
-            }
-        }
-    }
-
-    // Show the storage permission dialog if needed
-    if (showStoragePermissionDialog.value) {
-        StoragePermissionDialog(
-            onDismiss = {
-                showStoragePermissionDialog.value = false
-            }
-        )
-    }
 
 
 
 
     AppTheme {
         Scaffold(
-            topBar = { TopBarLayout() },
+            topBar = { HeaderComponent() },
             floatingActionButton = {
-                ActionButtons(itemCount = itemCount,
+                ActionButtonsComponent(itemCount = itemCount,
                     onAddNewTaskItem = {
                         viewModel.openAddDialog()
                         if (itemToAdd == null) viewModel.onUpdateItemToAdd(UITaskRecord.EMPTY_OBJECT)
@@ -126,7 +112,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
                                     Stats(appStatistic = appStats)
                                     if (items.isEmpty())
-                                        EmptyContentScreen()
+                                        EmptyContentComponent()
                                     else {   TaskListContent(
                                         tasksList = items,
                                         onItemClick = { clickedTask ->
@@ -147,13 +133,13 @@ fun MainScreen(viewModel: MainViewModel) {
                                 AnimatedVisibility(
                                     visible = isEditDialogOpen && itemToEdit != null
                                 ) {
-                                    EditDialog(
+                                    EditTaskDialog(
                                         itemToBeEdited = itemToEdit ?: return@AnimatedVisibility,
                                         onUpdateItem = { viewModel.updateItem(it) },
                                         onSaveUpdates = { viewModel.onUpdateItemToEdit(it) },
                                         onDismiss = {
                                             viewModel.closeEditDialog()
-                                        }, 
+                                        },
                                         onReadErrorMessageForTask = { viewModel.dismissErrorMessageForTask(it) })
                                 }
 
@@ -199,11 +185,10 @@ fun MainScreen(viewModel: MainViewModel) {
                                 viewModel.closeAddDialog()
                             },
                             onSourceSelected = {
-                                itemToAdd?.source?.let { it1 ->
-                                   if (it1.length > 30) viewModel.getExtensionsForNewSource(
-                                        it1
+                                    viewModel.getExtensionsForNewSource(
+                                        it
                                     )
-                                }
+
                             },
                             foundExtensions = foundExtensions )
                     }
@@ -276,103 +261,4 @@ fun MainScreen(viewModel: MainViewModel) {
         )
     }
 
-}
-
-@Composable
-private fun EmptyContentScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Image(
-            modifier = Modifier.size(620.dp),
-            painter = painterResource(id = R.drawable.ic_launcher_foreground),
-            contentDescription = "App logo.",
-            alpha = 0.02F,
-            contentScale = ContentScale.Fit
-        )
-
-        Text(text = stringResource(R.string.no_item_created), fontSize = 24.sp)
-    }
-}
-
-
-@Preview
-@Composable
-private fun TopBarLayout() {
-    TopAppBar(title = {
-        Image(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground),
-            contentDescription = "App logo"
-        )
-    }, backgroundColor = colorResource(R.color.lavender_blush), elevation = 2.dp)
-}
-
-@Preview
-@Composable
-fun BottomBarLayout() {
-
-    BottomAppBar(
-        backgroundColor = colorResource(R.color.lavender_blush),
-        cutoutShape = CircleShape
-    ) {
-        IconButton(onClick = {
-            //   scaffoldState.drawerState.open()
-        }) {
-            Icon(Icons.Filled.Menu, "MenuIcon")
-        }
-    }
-}
-
-
-@Composable
-fun ActionButtons(
-    itemCount: Int,
-    onAddNewTaskItem: () -> Unit,
-    onExecuteTasksClicked: () -> Unit
-) {
-
-    val processBackgroundColor = remember { Animatable(initialValue = Color.LightGray) }
-
-    LaunchedEffect(itemCount) {
-        if (itemCount > 0) {
-            processBackgroundColor.animateTo(Color(0xFF5C6BC0))
-//            processBackgroundColor.animateTo(Color(R.color.jet).copy(0.4f))
-
-        } else {
-            processBackgroundColor.animateTo(Color.LightGray)
-        }
-
-    }
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(bottom = 64.dp)
-    ) {
-
-        FloatingActionButton(
-            onClick = { onAddNewTaskItem() },
-            backgroundColor = colorResource(R.color.fiery_rose)
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = "Add New Item")
-        }
-
-
-        Spacer(modifier = Modifier.padding(8.dp))
-
-        FloatingActionButton(
-            interactionSource = remember {
-                if (itemCount > 0)
-                    MutableInteractionSource()
-                else emptyInteractionSource
-            },
-            modifier = Modifier.size(32.dp),
-            onClick = {
-                onExecuteTasksClicked()
-            },
-            backgroundColor = processBackgroundColor.value,
-        ) {
-            Icon(
-                Icons.Filled.Done,
-                contentDescription = "start sorting files",
-                tint = Color.White
-            )
-        }
-    }
 }
