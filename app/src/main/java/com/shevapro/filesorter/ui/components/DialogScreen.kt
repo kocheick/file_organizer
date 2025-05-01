@@ -16,7 +16,7 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import com.shevapro.filesorter.FolderPickerNew
+import com.shevapro.filesorter.FolderPicker
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -74,7 +74,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import com.shevapro.filesorter.R
@@ -1071,7 +1070,7 @@ private fun FolderPickerButton(
             onClick = {
                 // Use FolderPicker directly instead of the default Android picker
                 if (onDirectUriPick != null) {
-                    FolderPickerNew.showFolderPicker(context, null) { uri ->
+                    FolderPicker.showFolderPicker(context, null) { uri ->
                         // After getting the URI, we need to process it like the original onPick would
                         // This ensures permissions are handled correctly
                         grantUrisPermissions(uri, context = context)
