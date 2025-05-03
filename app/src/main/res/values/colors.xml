@@ -8,6 +8,13 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
+    <!-- You can assign the value by referencing the other color name -->
+    <color name="colorPrimary">@color/fiery_rose</color>
+    <color name="colorPrimaryDark">@color/colorPrimary</color> <!-- Consider changing this to a darker shade related to lavender_blush -->
+    <color name="colorAccent">@color/colorPrimary</color> <!-- Consider changing this too -->
+    <color name="textColorPrimary">@color/lavender_blush</color> <!-- Check contrast against lavender_blush -->
+    <color name="textColorSecondary">#FFFFFF</color> <!-- Check contrast against lavender_blush -->
+    <color name="colorHeader">@color/colorPrimary</color> <!-- This will now also use lavender_blush -->
 
     <color name="lavender_blush">#f6e8ea</color>
     <color name="fiery_rose">#ef626c</color>
