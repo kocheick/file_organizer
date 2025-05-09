@@ -6,6 +6,7 @@ import androidx.compose.runtime.Immutable
 sealed class UiState {
     object Loading : UiState()
     data class Processing(val stats : TaskStats) : UiState()
+    data class ProcessingComplete(val stats : TaskStats) : UiState()
     data class Data(val records: List<UITaskRecord> ,val exception: AppExceptions? = null) : UiState()
 //    data class Error(val messagesssage:String) : MainState()
 }

@@ -233,7 +233,7 @@ class MainViewModel(
      * Sorts files according to active tasks.
      */
     fun sortFiles() {
-        _state.value = UiState.Loading
+        _state.value = UiState.Processing(TaskStats(currentFileName = "Starting..."))
 
         val items: List<UITaskRecord> = taskViewModel.mainState.value.let { state ->
             if (state is UiState.Data) {
@@ -247,8 +247,6 @@ class MainViewModel(
 
         if (items.isNotEmpty()) {
             viewModelScope.launch(IO + coroutineExceptionHandler) {
-                delay(2800) // Delay for UI feedback
-
                 items.forEach { task ->
                     println("VIEWMODEL : processing with ext ${task.extension}")
                     try {
@@ -266,12 +264,14 @@ class MainViewModel(
                         sortFiles()
                     }
 
-                    _state.value = UiState.Data(
-                        taskViewModel.mainState.value.let { state ->
-                            if (state is UiState.Data) state.records else emptyList<UITaskRecord>()
-                        },
-                        null
-                    )
+
+                }
+                // Keep the last processing stats for the completed state
+                val lastStats = (_state.value as? UiState.Processing)?.stats
+
+                // Set state to ProcessingComplete instead of immediately going back to Data
+                if (lastStats != null) {
+                    _state.value = UiState.ProcessingComplete(lastStats)
                 }
                 // Show interstitial ad after operation completes
                 _shouldShowInterstitial.value = true
@@ -339,5 +339,18 @@ class MainViewModel(
      */
     fun onInterstitialAdClosed() {
         _shouldShowInterstitial.value = false
+    }
+
+    /**
+     * Called when the user clicks the "Done" button on the processing complete screen
+     * Transitions from ProcessingComplete state back to Data state
+     */
+    fun onProcessingCompleteAcknowledged() {
+        _state.value = UiState.Data(
+            taskViewModel.mainState.value.let { state ->
+                if (state is UiState.Data) state.records else emptyList()
+            },
+            null
+        )
     }
 }

@@ -38,7 +38,8 @@ fun MainScreen(
     viewModel: MainViewModel,
     onNavigateToAddTask: () -> Unit = {},
     onNavigateToEditTask: (UITaskRecord) -> Unit = {},
-    onNavigateToRuleManagement: () -> Unit = {}
+    onNavigateToRuleManagement: () -> Unit = {},
+    onNavigateToProcessing: () -> Unit = {}
 ) {
 
     val mainState: UiState by viewModel.mainState.collectAsState()
@@ -74,25 +75,29 @@ fun MainScreen(
         Scaffold(
             topBar = { HeaderComponent() },
             floatingActionButton = {
-                ActionButtonsComponent(
-                    itemCount = itemCount,
-                    onAddNewTaskItem = {
-                        onNavigateToAddTask()
-                    },
-                    onExecuteTasksClicked = {
-                        viewModel.sortFiles()
-                    },
-                    onNavigateToRuleManagement = {
-                        onNavigateToRuleManagement()
-                    }
-                )
+                // Only show FAB when not in Processing or ProcessingComplete state
+                if (mainState !is UiState.Processing && mainState !is UiState.ProcessingComplete) {
+                    ActionButtonsComponent(
+                        itemCount = itemCount,
+                        onAddNewTaskItem = {
+                            onNavigateToAddTask()
+                        },
+                        onExecuteTasksClicked = {
+                            viewModel.sortFiles()
+                            onNavigateToProcessing()
+                        },
+                        onNavigateToRuleManagement = {
+                            onNavigateToRuleManagement()
+                        }
+                    )
+                }
             },
             floatingActionButtonPosition = FabPosition.End,
             isFloatingActionButtonDocked = false,
             content = { paddingValues: PaddingValues ->
                 paddingValues
 
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
 
                     when (val currentState = mainState) {
                         is UiState.Loading -> {
@@ -196,10 +201,12 @@ fun MainScreen(
 
                         }
 
-                        is UiState.Processing -> {
-
-                            ProgressScreen(currentState.stats)
+                        is UiState.Processing, is UiState.ProcessingComplete -> {
+                            // Processing state is now handled in a separate screen
+                            // This will automatically navigate to the processing screen via onNavigateToProcessing
+                            // in the onExecuteTasksClicked handler
                         }
+
                     }
 
 
@@ -241,13 +248,13 @@ fun MainScreen(
                             }
 
                             is AppExceptions.PermissionExceptionForUri -> {
-                                PermissionRequestDialog(
-                                    uri = exception.errorMessage.substringBefore(" from")
-                                        ?.substringAfter("content://") ?: "", onAuthorize = {
-
-                                    }, onDismiss = {
-                                        viewModel.dismissError()
-                                    })
+//                                PermissionRequestDialog(
+//                                    uri = exception.errorMessage.substringBefore(" from")
+//                                        ?.substringAfter("content://") ?: "", onAuthorize = {
+//
+//                                    }, onDismiss = {
+//                                        viewModel.dismissError()
+//                                    })
                             }
 
                             is AppExceptions.UnknownError -> {
