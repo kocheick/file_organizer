@@ -125,4 +125,7 @@ dependencies {
     // AdMob
     implementation 'com.google.android.gms:play-services-ads:24.2.0'
 
+    // WebView compatibility
+    implementation 'androidx.webkit:webkit:1.6.1'
+
 }
