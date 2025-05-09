@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Custom theme for Storage Chooser -->
+    <!-- 
+    Indexes for theme array:
+    0. OVERVIEW_HEADER_INDEX - Overview header color
+    1. OVERVIEW_TEXT_INDEX - Overview text color
+    2. OVERVIEW_BG_INDEX - Overview background color
+    3. OVERVIEW_STORAGE_TEXT_INDEX - Overview storage text color
+    4. OVERVIEW_INDICATOR_INDEX - Overview indicator color
+    5. OVERVIEW_MEMORYBAR_INDEX - Overview memory bar color
+    6. SEC_FOLDER_TINT_INDEX - Secondary folder tint color
+    7. SEC_BG_INDEX - Secondary background color
+    8. SEC_TEXT_INDEX - Secondary text color
+    9. SEC_ADDRESS_TINT_INDEX - Secondary address tint color
+    10. SEC_HINT_TINT_INDEX - Secondary hint tint color
+    11. SEC_SELECT_LABEL_INDEX - Secondary select label color
+    12. SEC_FOLDER_CREATION_BG_INDEX - Secondary folder creation background color
+    13. SEC_DONE_FAB_INDEX - Secondary done FAB color
+    14. SEC_ADDRESS_BAR_BG - Secondary address bar background color
+    -->
+    <array name="storage_chooser_theme">
+        <!-- OVERVIEW_HEADER_INDEX -->
+        <item>@color/white</item>
+        <!-- OVERVIEW_TEXT_INDEX -->
+        <item>@color/white</item>
+        <!-- OVERVIEW_BG_INDEX -->
+        <item>@color/raisin_black</item>
+        <!-- OVERVIEW_STORAGE_TEXT_INDEX -->
+        <item>@color/white</item>
+        <!-- OVERVIEW_INDICATOR_INDEX -->
+        <item>@color/fiery_rose</item>
+        <!-- OVERVIEW_MEMORYBAR_INDEX -->
+        <item>@color/fiery_rose</item>
+        <!-- SEC_FOLDER_TINT_INDEX -->
+        <item>@color/fiery_rose</item>
+        <!-- SEC_BG_INDEX -->
+        <item>@color/jet</item>
+        <!-- SEC_TEXT_INDEX -->
+        <item>@color/white</item>
+        <!-- SEC_ADDRESS_TINT_INDEX -->
+        <item>@color/white</item>
+        <!-- SEC_HINT_TINT_INDEX -->
+        <item>@color/dark_gray_text</item>
+        <!-- SEC_SELECT_LABEL_INDEX -->
+        <item>@color/fiery_rose</item>
+        <!-- SEC_FOLDER_CREATION_BG_INDEX -->
+        <item>@color/raisin_black</item>
+        <!-- SEC_DONE_FAB_INDEX -->
+        <item>@color/fiery_rose</item>
+        <!-- SEC_ADDRESS_BAR_BG -->
+        <item>@color/jet</item>
+    </array>
+</resources>
