@@ -26,7 +26,16 @@ data class Frequency(val weekly: Int = 0, val monthly: Int = 0) {
 data class TaskStats(
     val totalFiles: Int = 0,
     val numberOfFilesMoved: Int = 0,
-    val currentFileName: String
+    val currentFileName: String,
+    val sourceFolder: String = "",
+    val destinationFolder: String = "",
+    val fileExtension: String = "",
+    val fileType: String = "",
+    val startTime: Long = System.currentTimeMillis(),
+    val currentFileSize: Long = 0,
+    val currentBytesTransferred: Long = 0,
+    val totalBytesTransferred: Long = 0,
+    val totalBytes: Long = 0
 )
 
 
