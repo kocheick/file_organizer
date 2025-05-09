@@ -2,6 +2,7 @@ package com.shevapro.filesorter.ui.viewmodel
 
 import android.app.Application
 import android.os.Build
+import android.os.Environment
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,6 +13,7 @@ import com.shevapro.filesorter.model.TaskStats
 import com.shevapro.filesorter.model.UITaskRecord
 import com.shevapro.filesorter.model.UiState
 import com.shevapro.filesorter.service.FileMover
+import com.shevapro.filesorter.service.AdService
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
@@ -26,7 +28,8 @@ import kotlinx.coroutines.launch
 class MainViewModel(
     private val app: Application,
     private val repository: Repository,
-    private val fileMover: FileMover
+    private val fileMover: FileMover,
+    private val adService: AdService
 ) : AndroidViewModel(app) {
 
     // Specialized ViewModels
@@ -38,6 +41,10 @@ class MainViewModel(
     private val _state: MutableStateFlow<UiState> = MutableStateFlow(UiState.Data(emptyList()))
     val mainState = _state.asStateFlow()
 
+    // Ad-related state
+    private val _shouldShowInterstitial = MutableStateFlow(false)
+    val shouldShowInterstitial = _shouldShowInterstitial.asStateFlow()
+
     init {
         // Initialize the state with data from the TaskViewModel
         viewModelScope.launch {
@@ -45,6 +52,15 @@ class MainViewModel(
                 _state.value = state
             }
         }
+
+        // Ensure preset tasks are created
+        viewModelScope.launch {
+            val downloadsPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path
+            repository.createPresetTasks(downloadsPath)
+        }
+
+        // Preload interstitial ad
+        adService.preloadInterstitialAd()
     }
 
     // Extensions for file selection
@@ -257,6 +273,8 @@ class MainViewModel(
                         null
                     )
                 }
+                // Show interstitial ad after operation completes
+                _shouldShowInterstitial.value = true
             }
         }
     }
@@ -314,5 +332,12 @@ class MainViewModel(
         viewModelScope.launch {
             statsViewModel.resetStats()
         }
+    }
+
+    /**
+     * Called when interstitial ad is closed or failed to show
+     */
+    fun onInterstitialAdClosed() {
+        _shouldShowInterstitial.value = false
     }
 }

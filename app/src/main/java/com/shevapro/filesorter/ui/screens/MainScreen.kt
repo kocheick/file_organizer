@@ -13,8 +13,10 @@ import androidx.compose.ui.res.stringResource
 import com.shevapro.filesorter.R
 import com.shevapro.filesorter.model.AppExceptions
 import com.shevapro.filesorter.model.AppStatistic
+import com.shevapro.filesorter.model.ScheduleType
 import com.shevapro.filesorter.model.UITaskRecord
 import com.shevapro.filesorter.model.UiState
+import java.util.Date
 import com.shevapro.filesorter.ui.components.LoadingScreen
 import com.shevapro.filesorter.ui.components.NotificationDialog
 import com.shevapro.filesorter.ui.components.PermissionRequestDialog
@@ -22,12 +24,14 @@ import com.shevapro.filesorter.ui.components.ProgressScreen
 import com.shevapro.filesorter.ui.components.Stats
 import com.shevapro.filesorter.ui.components.TaskListContent
 import com.shevapro.filesorter.ui.components.dialog.RemovalDialog
+import com.shevapro.filesorter.ui.components.dialog.ScheduleDialog
 import com.shevapro.filesorter.ui.components.main.ActionButtonsComponent
 import com.shevapro.filesorter.ui.components.main.EmptyContentComponent
 import com.shevapro.filesorter.ui.components.main.HeaderComponent
 import com.shevapro.filesorter.ui.theme.AppTheme
 import com.shevapro.filesorter.ui.viewmodel.MainViewModel
-
+import com.shevapro.filesorter.ui.components.ads.AdBanner
+import com.shevapro.filesorter.ui.components.ads.AdInterstitial
 
 @Composable
 fun MainScreen(
@@ -41,18 +45,23 @@ fun MainScreen(
     val itemCount =
         remember(mainState) { if (mainState is UiState.Data) (mainState as UiState.Data).records.size else 0 }
 
-    val isAddDialogOpen by viewModel.isAddDialogOpen.collectAsState()
-    val isEditDialogOpen by viewModel.isEditDialogOpen.collectAsState()
+    val isAddDialogOpen by viewModel.isAddDialogOpen.collectAsState(initial = false)
+    val isEditDialogOpen by viewModel.isEditDialogOpen.collectAsState(initial = false)
 
+    // Variable to track when to show the schedule dialog
+    val showScheduleDialog = remember { mutableStateOf<UITaskRecord?>(null) }
 
 //    var itemToEdit: UITaskRecord? by remember { mutableStateOf(null) }
-    val itemToEdit by viewModel.itemToEdit.collectAsState()
-    val itemToRemove by viewModel.itemToRemove.collectAsState()
-    val itemToAdd by viewModel.itemToAdd.collectAsState()
+    val itemToEdit by viewModel.itemToEdit.collectAsState(initial = null)
+    val itemToRemove by viewModel.itemToRemove.collectAsState(initial = null)
+    val itemToAdd by viewModel.itemToAdd.collectAsState(initial = null)
 
-    val foundExtensions : List<String> by viewModel.foundExtensions.collectAsState()
+    val foundExtensions : List<String> by viewModel.foundExtensions.collectAsState(initial = emptyList())
 
     val appStats: AppStatistic by viewModel.appStats.collectAsState()
+
+    // State for interstitial ad
+    val shouldShowInterstitial by viewModel.shouldShowInterstitial.collectAsState()
 
     // We no longer check for storage permissions at app startup
     // Instead, permissions are requested when the user selects a folder
@@ -113,11 +122,24 @@ fun MainScreen(
                                             onRemoveItem = { itemToBeRemoved ->
                                                 viewModel.onUpdateItemToRemove(itemToBeRemoved)
                                                 isRemovalDialogOpen.value = true
-
-                                            }, onToggleState = { itemToBeToggled ->
+                                            }, 
+                                            onToggleState = { itemToBeToggled ->
                                                 viewModel.toggleStateFor(itemToBeToggled)
-                                            })
-                                }
+                                            },
+                                            onToggleScheduled = { task ->
+                                                // Toggle scheduled state
+                                                val updatedTask = task.copy(isScheduled = !task.isScheduled)
+                                                viewModel.updateItem(updatedTask)
+                                            },
+                                            onSchedule = { task ->
+                                                // Show schedule dialog
+                                                showScheduleDialog.value = task
+                                            },
+                                            onEditClick = { task ->
+                                                onNavigateToEditTask(task)
+                                            }
+                                        )
+                                    }
 
 
 
@@ -138,6 +160,36 @@ fun MainScreen(
                                             isRemovalDialogOpen.value = false
                                             viewModel.onUpdateItemToRemove(null)
                                         })
+                                }
+
+                                // Show schedule dialog when a task is selected for scheduling
+                                showScheduleDialog.value?.let { task ->
+                                    ScheduleDialog(
+                                        task = task,
+                                        onScheduleSet = { scheduleType: ScheduleType, date: Date? ->
+                                            // Update the task with the new schedule based on selected type
+                                            val updatedTask = if (scheduleType == ScheduleType.NEVER) {
+                                                // For NEVER, disable scheduling completely
+                                                task.copy(
+                                                    isScheduled = false,
+                                                    scheduleType = ScheduleType.NEVER,
+                                                    scheduleTime = null
+                                                )
+                                            } else {
+                                                // For other types, enable scheduling with the selected date
+                                                task.copy(
+                                                    isScheduled = true,
+                                                    scheduleType = scheduleType,
+                                                    scheduleTime = date
+                                                )
+                                            }
+                                            viewModel.updateItem(updatedTask)
+                                            showScheduleDialog.value = null
+                                        },
+                                        onDismiss = {
+                                            showScheduleDialog.value = null
+                                        }
+                                    )
                                 }
 
                             }
@@ -220,7 +272,15 @@ fun MainScreen(
 
             },
             bottomBar = {
-                //BottomBarLayout()
+                AdBanner()
+            }
+        )
+
+        // Show interstitial ad when needed
+        AdInterstitial(
+            show = shouldShowInterstitial,
+            onAdClosed = {
+                viewModel.onInterstitialAdClosed()
             }
         )
     }
