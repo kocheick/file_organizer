@@ -59,7 +59,6 @@ fun RuleManagementScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    AppTheme {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -120,5 +119,5 @@ fun RuleManagementScreen(
                 )
             }
         }
-    }
+
 }

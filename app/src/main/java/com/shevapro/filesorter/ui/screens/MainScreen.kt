@@ -71,9 +71,8 @@ fun MainScreen(
 
 
 
-    AppTheme {
         Scaffold(
-            topBar = { HeaderComponent() },
+            topBar = { HeaderComponent(onNavigateToRuleManagement = onNavigateToRuleManagement) },
             floatingActionButton = {
                 // Only show FAB when not in Processing or ProcessingComplete state
                 if (mainState !is UiState.Processing && mainState !is UiState.ProcessingComplete) {
@@ -85,9 +84,6 @@ fun MainScreen(
                         onExecuteTasksClicked = {
                             viewModel.sortFiles()
                             onNavigateToProcessing()
-                        },
-                        onNavigateToRuleManagement = {
-                            onNavigateToRuleManagement()
                         }
                     )
                 }
@@ -290,6 +286,6 @@ fun MainScreen(
                 viewModel.onInterstitialAdClosed()
             }
         )
-    }
+
 
 }

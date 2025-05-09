@@ -48,7 +48,6 @@ fun TaskEditorScreen(
     var destination = item.destination
     var showSaveRuleDialog by remember { mutableStateOf(false) }
 
-    AppTheme {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -172,7 +171,7 @@ fun TaskEditorScreen(
                 )
             }
         }
-    }
+
 
     // Save Rule Dialog - only show if the callback is provided
     if (showSaveRuleDialog && onSaveAsRule != null) {

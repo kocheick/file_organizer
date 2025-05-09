@@ -34,7 +34,6 @@ fun ProcessingScreen(
 
     val isComplete = mainState is UiState.ProcessingComplete
 
-    AppTheme {
         Scaffold(
             topBar = { HeaderComponent() },
             bottomBar = { AdBanner() }
@@ -54,5 +53,5 @@ fun ProcessingScreen(
                 )
             }
         }
-    }
+
 }
