@@ -10,7 +10,7 @@ import com.shevapro.filesorter.model.Rule
 import com.shevapro.filesorter.model.RuleConverters
 import com.shevapro.filesorter.model.TaskRecord
 
-@Database(entities = [TaskRecord::class, MoveStat::class, Rule::class], version = 7, exportSchema = false)
+@Database(entities = [TaskRecord::class, MoveStat::class, Rule::class], version = 5, exportSchema = false)
 @TypeConverters(RuleConverters::class)
 
 abstract class TaskDatabase : RoomDatabase() {

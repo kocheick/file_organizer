@@ -13,7 +13,13 @@ interface TaskDao {
     @Query("SELECT * from task_records where id = :id")
     fun getById(id: Int): TaskRecord?
 
-    @Insert
+    @Query("SELECT * from task_records WHERE is_scheduled = 1")
+    fun getScheduledTasks(): Flow<List<TaskRecord>>
+
+    @Query("SELECT * from task_records WHERE is_active = 1")
+    fun getActiveTasks(): Flow<List<TaskRecord>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: TaskRecord)
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
