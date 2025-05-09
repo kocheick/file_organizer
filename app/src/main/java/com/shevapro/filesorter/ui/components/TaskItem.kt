@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.shevapro.filesorter.ui.components.ads.AdBanner
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Checkbox
@@ -240,7 +242,7 @@ fun TaskItem(
                     }
                     "$typePrefix: ${dateFormat.format(task.scheduleTime)}"
                 }
-                task.scheduleType == ScheduleType.NEVER -> "Scheduling disabled"
+                task.scheduleType == ScheduleType.NEVER  && !task.isScheduled -> "Scheduling disabled"
                 task.isScheduled -> "Schedule pending"
                 else -> "Not scheduled"
             }
@@ -390,9 +392,12 @@ fun TaskListContent(
         contentPadding = PaddingValues(bottom = 72.dp)
     ) {
 
-        items(tasksList) { task ->
-
-            TaskItem(
+        itemsIndexed(tasksList) { index, task ->
+            // Display the task item
+            // Insert first ad at position 3, then every 5 items after that
+            if ((index == 2) || (index > 3 && (index - 3) % 5 == 0 && index < tasksList.size - 1)) {
+                AdBanner(Modifier.padding( vertical = 8.dp))
+            } else TaskItem(
                 modifier = Modifier.padding(8.dp, vertical = 4.dp),
                 task = task,
                 onClick = { onItemClick(task) },
