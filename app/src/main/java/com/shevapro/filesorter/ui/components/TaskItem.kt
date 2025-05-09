@@ -88,14 +88,25 @@ fun TaskItem(
     val textSize =
         if (nmbrOfChrs < 3) 16.sp else if (nmbrOfChrs < 5) 14.sp else if (nmbrOfChrs < 8) 10.sp else 9.sp
 
+    val displayExtension = when {
+        nmbrOfChrs <= 5 -> task.extension
+        nmbrOfChrs <= 8 -> task.extension.take(5) + "…"
+        else -> task.extension.take(4) + "…"
+    }
 
+    val finalTextSize = when {
+        nmbrOfChrs < 3 -> 16.sp
+        nmbrOfChrs < 5 -> 14.sp
+        nmbrOfChrs < 8 -> 12.sp
+        else -> 10.sp
+    }
 
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(28.dp))
-            .clickable {
-                onClick()
-            }
+//            .clickable {
+//                onClick()
+//            }
             .background(
                 colorResource(id = R.color.fiery_rose).copy(alpha = 0.1F),
                 shape = RoundedCornerShape(28.dp)
@@ -141,13 +152,14 @@ fun TaskItem(
                     }
                 }
                 Text(
-                    task.extension,
+                    displayExtension,
                     modifier = Modifier.align(Alignment.Center),
                     fontWeight = FontWeight.Bold,
-                    fontSize = textSize
+                    fontSize = finalTextSize,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip
                 )
             }
-            // Source & destination folder paths
             Column(
                 modifier = Modifier
                     .weight(1f)
