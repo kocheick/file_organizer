@@ -8,7 +8,6 @@ import androidx.compose.material.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -27,8 +26,7 @@ import com.shevapro.filesorter.Utility.emptyInteractionSource
 fun ActionButtonsComponent(
     itemCount: Int,
     onAddNewTaskItem: () -> Unit,
-    onExecuteTasksClicked: () -> Unit,
-    onNavigateToRuleManagement: () -> Unit = {}
+    onExecuteTasksClicked: () -> Unit
 ) {
     val processBackgroundColor = remember { Animatable(initialValue = Color.LightGray) }
 
@@ -69,22 +67,6 @@ fun ActionButtonsComponent(
                 Icons.Filled.Done,
                 contentDescription = "start sorting files",
                 tint = Color.White
-            )
-        }
-
-        Spacer(modifier = Modifier.padding(8.dp))
-
-        FloatingActionButton(
-            modifier = Modifier.size(32.dp),
-            onClick = {
-                onNavigateToRuleManagement()
-            },
-            backgroundColor = colorResource(R.color.lavender_blush),
-        ) {
-            Icon(
-                Icons.Filled.Settings,
-                contentDescription = "Manage Rules",
-                tint = Color(0xFF5C6BC0)
             )
         }
     }
