@@ -11,5 +11,8 @@ interface Repository {
     fun getTask(taskRecord: TaskRecord): TaskRecord?
     suspend fun getTaskbyId(taskID: Int): TaskRecord?
     suspend fun getTasks(): Flow<List<TaskRecord>>
+    suspend fun getScheduledTasks(): Flow<List<TaskRecord>>
+    suspend fun getActiveTasks(): Flow<List<TaskRecord>>
     suspend fun deleteAll()
+    suspend fun createPresetTasks(downloadsPath: String)
 }
