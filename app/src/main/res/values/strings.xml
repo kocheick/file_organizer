@@ -27,4 +27,16 @@
     <string name="files_moved">Files Moved</string>
     <string name="time_saved">Time saved</string>
     <string name="swap_paths">swap paths</string>
+    <string name="schedule_not_set_yet">Schedule not set yet</string>
+    <string name="edit_schedule">Edit Schedule</string>
+    <string name="set_schedule">Set Schedule</string>
+    <string name="scheduled_daily_at">Scheduled daily at</string>
+    <string name="scheduled_weekly_on">Scheduled weekly on</string>
+    <string name="scheduled_once_on">Scheduled once on</string>
+    <string name="tap_set_schedule_to_configure">Tap "Set Schedule" to configure</string>
+    <string name="delete_task">Delete Task</string>
+    <string name="hide_actions">Hide Actions</string>
+    <string name="show_actions">Show Actions</string>
+    <string name="complete_schedule_setup">Complete Schedule Setup</string>
+    <string name="enable_scheduling">Enable Scheduling</string>
 </resources>
