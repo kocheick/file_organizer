@@ -1,6 +1,7 @@
 package com.shevapro.filesorter
 
 import android.app.Application
+import com.google.android.gms.ads.MobileAds
 import com.shevapro.filesorter.di.appModules
 import com.shevapro.filesorter.ui.viewmodel.MainViewModel
 import org.koin.android.ext.android.get
@@ -23,6 +24,12 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+
+        // Initialize AdMob
+        MobileAds.initialize(this) { initializationStatus ->
+            val statusMap = initializationStatus.adapterStatusMap
+            // Log the initialization status if needed
+        }
 
         // Initialize Koin
         startKoin {
