@@ -1,11 +1,15 @@
 package com.shevapro.filesorter.ui.components
 
 import android.Manifest
+import android.app.Activity.RESULT_OK
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
 import android.os.Environment
 import android.provider.Settings
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +26,7 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -34,6 +39,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.rememberPermissionState
 import com.shevapro.filesorter.R
 import com.shevapro.filesorter.Utility
 
@@ -76,55 +85,55 @@ fun NotificationDialog(title: String, message: String, onDismiss: () -> Unit) {
 
 @Composable
 fun PermissionRequestDialog(uri:String,onAuthorize:(Uri)->Unit, onDismiss: () -> Unit={}){
-    val path:String? = "content://$uri"
-    val parsedUri = Uri.parse(path)
-
-
-    val sourcePath = remember { mutableStateOf(path) }
-
-
-    val sourceDirectoryPickerLauncher = pickDirectory(pickedUri = {
-        sourcePath.value = it
-    })
-
-    val _permissions = listOf(
-        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        Manifest.permission.READ_EXTERNAL_STORAGE
-    )
-    val permissions = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) _permissions.plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-            .plus(Manifest.permission.MANAGE_EXTERNAL_STORAGE).toList() else _permissions.toList()
-    }
-    val srcLauncher = permissionLauncher(sourceDirectoryPickerLauncher, sourcePath, permissions)
-
-
-    AlertDialog(onDismissRequest = { onDismiss() },
-        title = { Text("Access Permission Needed", fontSize = 20.sp, fontWeight = FontWeight.SemiBold) },
-        buttons = {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-
-
-                TextButton(
-                    onClick = { onDismiss()
-                    }
-                ) {
-                    Text("Cancel")
-                }
-                TextButton(
-                    onClick = {
-                       srcLauncher.launch(permissions.toTypedArray())
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        contentColor = colorResource(R.color.fiery_rose),
-                        backgroundColor = Color.LightGray.copy(0.0f)
-                    )
-                ) {
-                    Text("Authorize")
-                }
-            }
-        }, text = {
-            Text("Permission is needed for following uri $parsedUri")
-        })
+//    val path:String? = "content://$uri"
+//    val parsedUri = Uri.parse(path)
+//
+//
+//    val sourcePath = remember { mutableStateOf(path) }
+//
+//
+//    val sourceDirectoryPickerLauncher = pickDirectory(pickedUri = {
+//        sourcePath.value = it
+//    })
+//
+//    val _permissions = listOf(
+//        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+//        Manifest.permission.READ_EXTERNAL_STORAGE
+//    )
+//    val permissions = remember {
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) _permissions.plus(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+//            .plus(Manifest.permission.MANAGE_EXTERNAL_STORAGE).toList() else _permissions.toList()
+//    }
+//    val srcLauncher = permissionLauncher(sourceDirectoryPickerLauncher, sourcePath, permissions)
+//
+//
+//    AlertDialog(onDismissRequest = { onDismiss() },
+//        title = { Text("Access Permission Needed", fontSize = 20.sp, fontWeight = FontWeight.SemiBold) },
+//        buttons = {
+//            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+//
+//
+//                TextButton(
+//                    onClick = { onDismiss()
+//                    }
+//                ) {
+//                    Text("Cancel")
+//                }
+//                TextButton(
+//                    onClick = {
+//                       srcLauncher.launch(permissions.toTypedArray())
+//                    },
+//                    colors = ButtonDefaults.buttonColors(
+//                        contentColor = colorResource(R.color.fiery_rose),
+//                        backgroundColor = Color.LightGray.copy(0.0f)
+//                    )
+//                ) {
+//                    Text("Authorize")
+//                }
+//            }
+//        }, text = {
+//            Text("Permission is needed for following uri $parsedUri")
+//        })
 }
 
 /**
@@ -283,4 +292,69 @@ fun StoragePermissionDialog(
             }
         }
     )
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun permissionLauncher(
+    directoryPickerLauncher: ManagedActivityResultLauncher<Uri?, Uri?>,
+    sourcePath: MutableState<String?>, permissions: List<String>
+): ManagedActivityResultLauncher<Array<String>, Map<String, @JvmSuppressWildcards Boolean>> {
+
+    val permissionState = rememberMultiplePermissionsState(permissions = permissions)
+    val context = LocalContext.current
+
+    val storageAccessPermissionState =
+        rememberPermissionState(permission = Manifest.permission.WRITE_EXTERNAL_STORAGE)
+
+    val path =
+        if (sourcePath.value == stringResource(id = (R.string.no_folder_selected))) Uri.EMPTY else sourcePath.value?.toUri()
+
+    // Launcher for the MANAGE_EXTERNAL_STORAGE permission intent
+    val manageExternalStorageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            directoryPickerLauncher.launch(sourcePath.value?.toUri())
+        } else {
+            // Permission denied, show a message or handle accordingly
+            println("MANAGE_EXTERNAL_STORAGE permission denied")
+        }
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissionMap ->
+
+            val areGranted = permissionMap.values.reduce { acc, next ->
+                acc && next
+            }
+            if (areGranted) {
+                println("Permission granted")
+                directoryPickerLauncher.launch(sourcePath.value?.toUri())
+            } else if (permissionState.shouldShowRationale) {
+                println("Permission should show rational")
+            } else {
+                println("Permission not granted")
+                if (VERSION.SDK_INT >= VERSION_CODES.R) {
+                    // For Android 11 (R) and above, we need to request MANAGE_EXTERNAL_STORAGE permission
+                    try {
+                        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                        val uri = Uri.fromParts("package", context.packageName, null)
+                        intent.data = uri
+                        manageExternalStorageLauncher.launch(intent)
+                    } catch (e: Exception) {
+                        // If the specific intent is not available, fall back to the general storage settings
+                        val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                        manageExternalStorageLauncher.launch(intent)
+                    }
+                } else {
+                    // For Android 10 and below, use the regular permission request
+                    permissionState.launchMultiplePermissionRequest()
+                }
+            }
+            println("is it back to granted $areGranted ${permissionMap.values.reduce { acc, next -> acc && next }}")
+        })
+
+    return launcher
 }
