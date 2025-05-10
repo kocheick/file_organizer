@@ -25,7 +25,7 @@ class TaskViewModel(
 ) : AndroidViewModel(application) {
 
     // Main state for UI
-    private val _mainState = MutableStateFlow<UiState>(UiState.Data(emptyList()))
+    private val _mainState = MutableStateFlow<UiState>(UiState.data(emptyList()))
     val mainState: StateFlow<UiState> = _mainState.asStateFlow()
 
     // Task lists
@@ -67,7 +67,7 @@ class TaskViewModel(
             taskRepository.getTasks().collectLatest { tasks ->
                 val uiTasks = tasks.map { it.toUITaskRecord() }
                 _allTasks.value = uiTasks
-                _mainState.value = UiState.Data(uiTasks)
+                _mainState.value = UiState.data(uiTasks)
             }
         }
 
@@ -88,7 +88,7 @@ class TaskViewModel(
      * Dismisses the current error.
      */
     fun dismissError() {
-        _mainState.value = UiState.Data(_allTasks.value)
+        _mainState.value = UiState.data(_allTasks.value)
     }
 
     /**
@@ -290,7 +290,24 @@ class TaskViewModel(
                 if (it.id == id) it.copy(errorMessage = null) else it 
             }
             _allTasks.value = updatedTasks
-            _mainState.value = UiState.Data(updatedTasks)
+            _mainState.value = UiState.data(updatedTasks)
+        }
+    }
+
+    /**
+     * Updates a task with an error message.
+     *
+     * @param id The task ID
+     * @param errorMessage The error message
+     */
+    fun updateTaskWithErrorMessage(id: Int, errorMessage: String) {
+        viewModelScope.launch {
+            val tasks = _allTasks.value
+            val updatedTasks = tasks.map {
+                if (it.id == id) it.copy(errorMessage = errorMessage, isActive = false) else it
+            }
+            _allTasks.value = updatedTasks
+            _mainState.value = UiState.data(updatedTasks)
         }
     }
 }

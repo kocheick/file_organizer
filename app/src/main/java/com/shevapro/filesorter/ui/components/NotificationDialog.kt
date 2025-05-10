@@ -57,6 +57,9 @@ enum class PermissionAction {
 
 @Composable
 fun NotificationDialog(title: String, message: String, onDismiss: () -> Unit) {
+    // Debug print to help troubleshoot
+    println("Showing NotificationDialog - title: $title, message: $message")
+
     AlertDialog(onDismissRequest = { onDismiss() },
         title = { Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold) },
 
@@ -68,6 +71,7 @@ fun NotificationDialog(title: String, message: String, onDismiss: () -> Unit) {
                     .height(48.dp), horizontalArrangement = Arrangement.End) {
                 TextButton(modifier = Modifier.fillMaxHeight(),
                     onClick = {
+                        println("NotificationDialog OK button clicked")
                         onDismiss()
                     },
                     colors = ButtonDefaults.buttonColors(

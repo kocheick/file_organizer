@@ -44,7 +44,7 @@ fun MainScreen(
 
     val mainState: UiState by viewModel.mainState.collectAsState()
     val itemCount =
-        remember(mainState) { if (mainState is UiState.Data) (mainState as UiState.Data).records.size else 0 }
+        remember(mainState) { if (mainState.isData) mainState.records.size else 0 }
 
     val isAddDialogOpen by viewModel.isAddDialogOpen.collectAsState(initial = false)
     val isEditDialogOpen by viewModel.isEditDialogOpen.collectAsState(initial = false)
@@ -75,15 +75,20 @@ fun MainScreen(
             topBar = { HeaderComponent(onNavigateToRuleManagement = onNavigateToRuleManagement) },
             floatingActionButton = {
                 // Only show FAB when not in Processing or ProcessingComplete state
-                if (mainState !is UiState.Processing && mainState !is UiState.ProcessingComplete) {
+                if (!mainState.isProcessing && !mainState.isProcessingComplete) {
                     ActionButtonsComponent(
                         itemCount = itemCount,
                         onAddNewTaskItem = {
                             onNavigateToAddTask()
                         },
                         onExecuteTasksClicked = {
-                            viewModel.sortFiles()
-                            onNavigateToProcessing()
+                            if (viewModel.hasActiveTasksToProcess()) {
+                                viewModel.sortFiles()
+                                onNavigateToProcessing()
+                            } else {
+                                // Show error message when no active tasks
+                                viewModel.showNoActiveTasksError()
+                            }
                         }
                     )
                 }
@@ -95,14 +100,13 @@ fun MainScreen(
 
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
 
-                    when (val currentState = mainState) {
-                        is UiState.Loading -> {
+                    when {
+                        mainState.isLoading -> {
                             LoadingScreen()
                         }
 
-                        is UiState.Data
-                        -> {
-                            val items = currentState.records
+                        mainState.isData -> {
+                            val items = mainState.records
 
 
                                 val isRemovalDialogOpen = rememberSaveable { mutableStateOf(false) }
@@ -197,18 +201,19 @@ fun MainScreen(
 
                         }
 
-                        is UiState.Processing, is UiState.ProcessingComplete -> {
+                        mainState.isProcessing || mainState.isProcessingComplete -> {
                             // Processing state is now handled in a separate screen
                             // This will automatically navigate to the processing screen via onNavigateToProcessing
                             // in the onExecuteTasksClicked handler
                         }
 
+                        else -> {}
                     }
 
 
                     // Add dialog replaced with navigation to add screen
-                    if (mainState is UiState.Data) AnimatedVisibility(visible = (mainState as UiState.Data).exception != null) {
-                        when (val exception = (mainState as UiState.Data).exception) {
+                    if (mainState.isData) AnimatedVisibility(visible = mainState.exception != null) {
+                        when (val exception = mainState.exception) {
 
                             is AppExceptions.MissingFieldException -> {
                                 NotificationDialog(

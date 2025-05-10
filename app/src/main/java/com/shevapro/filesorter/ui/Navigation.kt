@@ -38,9 +38,10 @@ fun AppNavigation(
     val presetRules by ruleViewModel.presetRules.collectAsState()
     val allRules by ruleViewModel.allRules.collectAsState()
     val currentRule by ruleViewModel.currentRule.collectAsState()
-    
+
     // Animation duration
     val animDuration = 300
+
     AppTheme {
         NavHost(
             navController = navController,
@@ -225,7 +226,8 @@ fun AppNavigation(
                     onDone = {
                         viewModel.onProcessingCompleteAcknowledged()
                         navController.popBackStack(NavigationRoutes.MAIN, false)
-                    }
+                    },
+
                 )
             }
         }

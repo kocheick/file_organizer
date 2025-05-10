@@ -227,7 +227,7 @@ fun TaskItem(
                     style = MaterialTheme.typography.caption,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colors.secondaryVariant.copy(alpha = 0.9f),
-                    modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                    modifier = Modifier.padding(start = 4.dp)
                 )
             }
         }
@@ -236,7 +236,7 @@ fun TaskItem(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(horizontal = 8.dp)
         ) {
             // Display current schedule status (always visible)
             val scheduleStatusText = when {
@@ -409,7 +409,8 @@ fun TaskListContent(
             // Insert first ad at position 3, then every 5 items after that
             if ((index == 2) || (index > 3 && (index - 3) % 5 == 0 && index < tasksList.size - 1)) {
                 AdBanner(Modifier.padding( vertical = 8.dp))
-            } else TaskItem(
+            }
+            TaskItem(
                 modifier = Modifier.padding(8.dp, vertical = 4.dp),
                 task = task,
                 onClick = { onItemClick(task) },

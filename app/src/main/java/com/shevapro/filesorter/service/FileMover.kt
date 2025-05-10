@@ -2,6 +2,7 @@ package com.shevapro.filesorter.service
 
 import android.content.Context
 import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import com.shevapro.filesorter.Utility.grantUrisPermissions
 import com.shevapro.filesorter.model.AppExceptions
 import com.shevapro.filesorter.model.TaskStats
@@ -38,6 +39,39 @@ class FileMover private constructor(
                 validationService,
                 errorHandlingService
             )
+        }
+    }
+
+    /**
+     * Gets the count of files with a specific extension in a directory.
+     *
+     * @param source The source directory path
+     * @param extension The file extension to filter by
+     * @param context The application context
+     * @return Count of files with the specified extension
+     */
+    fun getTaskFileCount(source: String, extension: String, context: Context): Int {
+        return try {
+            val sourceUri = Uri.parse(source)
+            val sourceFolder = when (sourceUri.scheme) {
+                "file" -> DocumentFile.fromFile(java.io.File(sourceUri.path ?: ""))
+                "content" -> DocumentFile.fromTreeUri(context, sourceUri)
+                else -> {
+                    val path = sourceUri.path
+                    if (path != null) {
+                        DocumentFile.fromFile(java.io.File(path))
+                    } else {
+                        null
+                    }
+                }
+            }
+
+            sourceFolder?.listFiles()?.count { file ->
+                file.isFile && file.name?.lowercase()?.endsWith(".${extension.lowercase()}") == true
+            } ?: 0
+        } catch (e: Exception) {
+            errorHandlingService.logError(e, "getTaskFileCount", Uri.parse(source))
+            0
         }
     }
 

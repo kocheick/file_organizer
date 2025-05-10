@@ -65,8 +65,20 @@ class FileOperationService(private val statsService: StatsService) {
                 moveProgress,
                 permissionCallback
             )
+        } else {
+            Log.d(TAG, "No files to move.")
+            // Report empty task to the UI
+            val emptyTaskStats = TaskStats(
+                totalFiles = 0,
+                numberOfFilesMoved = 0,
+                currentFileName = "",
+                sourceFolder = source,
+                destinationFolder = destination,
+                fileExtension = extension,
+                startTime = System.currentTimeMillis()
+            )
+            moveProgress(emptyTaskStats)
         }
-        else { Log.d(TAG, "No files to move.") }
 
         statsService.logTaskDetails(source,
             destination,
@@ -85,7 +97,20 @@ class FileOperationService(private val statsService: StatsService) {
         extension: String
     ) = sourceFolder
         .listFiles()
-        .filter { file -> file.isFile && file.name?.endsWith(".$extension",true) == true }
+        .filter { file ->
+            // Make sure we only get files with the correct extension
+            file.isFile && file.name?.let { name ->
+                // Ensure we're not picking up files that already have duplicate extensions
+                // like "file.mp3.mp3" which would cause problems when moved
+                val normalizedName = name.lowercase()
+                val normalizedExt = extension.lowercase()
+
+                // Simple check for extension at the end
+                normalizedName.endsWith(".$normalizedExt") &&
+                        // Make sure it's not already duplicated
+                        !normalizedName.endsWith(".$normalizedExt.$normalizedExt")
+            } == true
+        }
 
     /**
      * Gets file extensions available in a folder.
@@ -281,14 +306,37 @@ class FileOperationService(private val statsService: StatsService) {
         filesToMove.forEachIndexed { index, file ->
             Log.d(TAG, "Moving ${file.name} (${index + 1}/$total)")
             withContext(IO) {
-                val destinationFile =
-                    destinationFolder.createFile(file.type ?: "*/*", file.name!!)
+                val originalName = file.name!!
+
+                // Get the base name and original extension to prevent duplication
+                val lastDotIndex = originalName.lastIndexOf('.')
+                val baseName = if (lastDotIndex > 0) originalName.substring(0, lastDotIndex) else originalName
+                val originalExtension = if (lastDotIndex > 0) originalName.substring(lastDotIndex + 1) else ""
+
+                // Prevent extension duplication by using explicit MIME type handling
+                // Always use a generic MIME type to prevent automatic extension addition
+                val mimeType = "*/*"
+
+                // Make sure we're not working with an already duplicated filename
+                var properFileName = originalName
+                val extensionLower = originalExtension.lowercase()
+
+                // Check for already duplicated extensions like "file.mp3.mp3"
+                if (extensionLower.isNotEmpty() && baseName.lowercase().endsWith(".$extensionLower")) {
+                    // Found a case like "file.mp3.mp3" - fix it by removing the duplicate
+                    val baseNameWithoutDupe = baseName.substring(0, baseName.length - extensionLower.length - 1)
+                    properFileName = "$baseNameWithoutDupe.$originalExtension"
+                    Log.d(TAG, "Fixed duplicate extension: $originalName -> $properFileName")
+                }
+
+                Log.d(TAG, "Moving file with name: $properFileName")
+
+                // Always use generic MIME type to prevent extension manipulation
+                val destinationFile = destinationFolder.createFile(mimeType, properFileName)
 
                 if (destinationFile != null) {
-                    // Get file size
                     val fileSize = file.length()
 
-                    // Update stats with current file before starting operation
                     stats = stats.copy(
                         currentFileName = file.name!!,
                         fileType = file.type ?: "*/*",
@@ -297,7 +345,7 @@ class FileOperationService(private val statsService: StatsService) {
                     )
                     // Send progress update before starting file copy
                     onShareProgress(stats)
-
+delay(1000)
                     contentResolver.openOutputStream(destinationFile.uri)
                         ?.use { outputStream ->
                             contentResolver.openInputStream(file.uri)?.use { inputStream ->
@@ -327,9 +375,16 @@ class FileOperationService(private val statsService: StatsService) {
                                 }
 
                                 // Ensure final progress is reported
+                                // Correctly calculate totalBytesTransferred:
+                                // stats.totalBytesTransferred (before this line) contains the sum of bytes from previous files
+                                // PLUS whatever was last reported for the current file's progress (stats.currentBytesTransferred).
+                                // To get the base total from previous files, subtract the current file's last reported progress.
+                                val totalBytesTransferredFromPreviousFiles = stats.totalBytesTransferred - stats.currentBytesTransferred
                                 stats = stats.copy(
-                                    currentBytesTransferred = fileSize,
-                                    totalBytesTransferred = stats.totalBytesTransferred + (fileSize - totalBytesRead)
+                                    currentBytesTransferred = fileSize, // Current file is now fully processed
+                                    totalBytesTransferred = totalBytesTransferredFromPreviousFiles + fileSize, // Add current file's full size to the base
+                                    numberOfFilesMoved = stats.numberOfFilesMoved, // No change to numberOfFilesMoved at this point
+                                    totalFiles = stats.totalFiles // totalFiles does not change during the operation
                                 )
                                 onShareProgress(stats)
                             }
@@ -354,20 +409,25 @@ class FileOperationService(private val statsService: StatsService) {
                     retryCallback(file.uri)
                 }
 
-                // Short delay between files to avoid overwhelming the system
                 if (index < filesToMove.size - 1) {
-                    delay(300) // Reduced delay for better UX
+                    delay(300)
                 }
             }
         }
 
-        // Final progress update
         stats = stats.copy(
             numberOfFilesMoved = total,
             currentBytesTransferred = 0,
             currentFileSize = 0,
-            totalBytesTransferred = totalBytes  // All bytes should be transferred
+            totalBytesTransferred = totalBytes,
+            totalBytes = totalBytes
         )
+
+        if (stats.numberOfFilesMoved < stats.totalFiles) {
+            stats = stats.copy(numberOfFilesMoved = stats.totalFiles)
+        }
+
+        println("Final stats after file moves - Files: ${stats.numberOfFilesMoved}/${stats.totalFiles}, Bytes: ${stats.totalBytesTransferred}/${stats.totalBytes}")
         onShareProgress(stats)
     }
 }

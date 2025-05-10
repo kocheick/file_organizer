@@ -22,7 +22,6 @@ data class Frequency(val weekly: Int = 0, val monthly: Int = 0) {
 
 }
 
-
 data class TaskStats(
     val totalFiles: Int = 0,
     val numberOfFilesMoved: Int = 0,
@@ -38,6 +37,25 @@ data class TaskStats(
     val totalBytes: Long = 0
 )
 
+/**
+ * Represents aggregated statistics across multiple tasks
+ */
+data class AggregatedTaskStats(
+    val totalFiles: Int = 0,
+    val numberOfFilesMoved: Int = 0,
+    val currentTask: Int = 0,
+    val totalTasks: Int = 0,
+    val currentFileName: String = "",
+    val currentFileExtension: String = "",
+    val currentSourceFolder: String = "",
+    val currentDestinationFolder: String = "",
+    val startTime: Long = System.currentTimeMillis(),
+    val currentFileSize: Long = 0,
+    val currentBytesTransferred: Long = 0,
+    val totalBytesTransferred: Long = 0,
+    val totalBytes: Long = 0,
+    val completedExtensions: List<String> = emptyList()
+)
 
 @Entity(tableName = "app_stats")
 data class AppStatisticRecord(
